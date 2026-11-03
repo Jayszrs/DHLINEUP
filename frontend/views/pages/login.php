@@ -6,4 +6,4 @@
     <label>Password<input name="password" type="password" required maxlength="128" autocomplete="current-password"></label>
     <button class="btn primary" type="submit">Masuk</button>
 </form>
-<p class="fineprint">Gunakan akun yang dibuat saat setup. Data tersimpan di server Laragon.</p>
+<p class="fineprint">Gunakan akun yang dibuat saat setup. Data tersimpan di server aplikasi.</p>

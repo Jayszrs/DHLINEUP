@@ -83,7 +83,7 @@ final class Spreadsheet
             }
             rewind($handle);
             $rows = [];
-            while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+            while (($row = fgetcsv($handle, 0, $delimiter, '"', '')) !== false) {
                 $rows[] = array_map(static function ($value) {
                     $text = (string) $value;
                     return mb_check_encoding($text, 'UTF-8') ? $text : mb_convert_encoding($text, 'UTF-8', 'Windows-1252');

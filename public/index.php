@@ -16,7 +16,7 @@ try {
         render('error', ['title' => 'Database belum siap', 'message' => 'Nyalakan MySQL di Laragon, lalu jalankan install.bat dari folder proyek. Jika koneksi berbeda, salin backend/config/local.example.php menjadi local.php dan sesuaikan isinya.', 'user' => null]);
         exit;
     }
-    (new Fleet\Controller($db))->run();
+    (new Fleet\Controller($db, $config))->run();
 } catch (Fleet\HttpException $error) {
     http_response_code($error->status);
     render('error', ['title' => 'Permintaan belum dapat diproses', 'message' => $error->getMessage(), 'user' => $user ?? null]);

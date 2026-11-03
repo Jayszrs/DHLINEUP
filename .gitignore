@@ -5,6 +5,7 @@ storage/logs/*
 !storage/logs/.gitkeep
 .serena/
 .playwright-mcp/
+dist/
 tests/.runtime/
 legacy/react-source/node_modules/
 legacy/react-source/dist/

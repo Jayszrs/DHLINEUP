@@ -6,7 +6,16 @@ use PDO;
 
 final class Auth
 {
-    public function __construct(private readonly PDO $db) {}
+    public function __construct(
+        private readonly PDO $db,
+        private readonly string $setupTokenHash = '',
+        private readonly bool $allowLocalSetup = true,
+    ) {}
+
+    public function requiresActivation(): bool
+    {
+        return !$this->allowLocalSetup || !in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
+    }
 
     public function user(): ?array
     {
@@ -30,8 +39,11 @@ final class Auth
 
     public function setup(array $input): void
     {
-        if (!in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true)) {
-            throw new HttpException(403, 'Buat akun pertama dari browser di laptop server (localhost).');
+        if ($this->requiresActivation()) {
+            $token = Validation::text($input, 'activation_code', 128);
+            if ($this->setupTokenHash === '' || $token === '' || !hash_equals($this->setupTokenHash, hash('sha256', $token))) {
+                throw new HttpException(403, 'Kode aktivasi tidak cocok. Gunakan kode aktivasi pemilik hosting untuk membuat akun pertama.');
+            }
         }
         $name = Validation::text($input, 'name', 120, true);
         $username = Validation::text($input, 'username', 80, true);

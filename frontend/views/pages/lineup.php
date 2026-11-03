@@ -26,7 +26,7 @@ $needs = count(array_filter($rows, static fn($r) => status_of($r)[0] !== 'SESUAI
 <tr><td class="date-cell"><?= e(date_id($row['work_date'], true)) ?></td><td><strong class="unit-label"><?= e($row['unit']) ?></strong></td><td><?= e($row['equipment'] ?: '-') ?></td><td><span class="operator-name"><?= e($row['operator_name'] ?: 'Belum diisi') ?></span><small>NIK <?= e($row['nik'] ?: '-') ?></small></td><td><?php chip($row['mine']) ?></td><td><?php chip($row['ftw']) ?></td><td><?php status_pill($row) ?></td><td><a class="table-action" href="<?= e(url('detail', ['id' => $row['id']])) ?>">Periksa ›</a></td></tr>
 <?php endforeach ?>
 </tbody></table>
-<?php if (!$rows): ?><div class="empty-state"><h3>Tidak ada data yang sesuai</h3><p>Ubah district, tanggal, shift, type, atau kata pencarian. Data awal hanya tersedia untuk BCP.</p><a class="subtle-button" href="<?= e(url('lineup')) ?>">Reset filter</a></div><?php endif ?>
+<?php if (!$rows): ?><div class="empty-state"><h3>Tidak ada data yang sesuai</h3><p>Ubah district, tanggal, shift, type, atau kata pencarian. Gunakan Input Line Up untuk menambahkan catatan.</p><a class="subtle-button" href="<?= e(url('lineup')) ?>">Reset filter</a></div><?php endif ?>
 </div></div>
 <p class="table-footnote"><?= count($rows) ?> penugasan • FTW dinilai terpisah dari Mine Dispatch • Ekspor mengikuti filter yang sudah diterapkan.</p>
 </section>

@@ -9,6 +9,8 @@ $settings = array_replace([
     'db_user' => 'root',
     'db_password' => '',
     'timezone' => 'Asia/Jakarta',
+    'setup_token_hash' => '',
+    'allow_local_setup' => true,
 ], $local);
 foreach (['db_host' => 'DH_DB_HOST', 'db_port' => 'DH_DB_PORT', 'db_name' => 'DH_DB_DATABASE', 'db_user' => 'DH_DB_USERNAME', 'db_password' => 'DH_DB_PASSWORD'] as $key => $env) {
     if (getenv($env) !== false) {

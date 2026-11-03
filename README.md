@@ -4,6 +4,8 @@ Source DH FleetSync sudah dikonversi menjadi aplikasi PHP native dengan frontend
 
 Sudah diuji menggunakan **PHP 8.1.10, MySQL 8.0.30, dan Apache 2.4.54** yang terpasang di `C:\laragon` pada laptop ini.
 
+Versi online sudah dipasang di **https://ptdh.xo.je/** dengan database kosong, sesuai pilihan pengguna. Detail hosting, aktivasi akun pertama, paket update, dan backup ada di [panduan InfinityFree](docs/DEPLOY_INFINITYFREE.md). Data asli pada Laragon tetap terpisah.
+
 ## Buka di laptop ini
 
 1. Buka **Laragon 6**, pilih **Start All** agar Apache dan MySQL berjalan.
