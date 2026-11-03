@@ -1,0 +1,11 @@
+backend/config/local.php
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/logs/*
+!storage/logs/.gitkeep
+.serena/
+.playwright-mcp/
+tests/.runtime/
+legacy/react-source/node_modules/
+legacy/react-source/dist/
+*.log

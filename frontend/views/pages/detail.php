@@ -1,0 +1,8 @@
+<section>
+<div class="page-title detail-heading"><div><h2><?= e($row['unit']) ?> <span>• <?= e(date_id($row['work_date'])) ?></span></h2><p>Site <?= e($row['site']) ?> / <?= e($row['shift']) ?> / <?= e($row['type_category']) ?></p></div><div class="row-buttons"><a class="btn primary" href="<?= e(url('lineup-form', ['id' => $row['id']])) ?>">Edit</a><a class="subtle-button" href="<?= e(url('lineup', ['site' => $row['site']])) ?>">Kembali</a></div></div>
+<div class="identity-grid"><?php foreach (['unit' => 'KODE ALAT', 'equipment' => 'JENIS ALAT', 'operator_name' => 'NAMA OPERATOR', 'nik' => 'NIK OPERATOR'] as $key => $label): ?><div><small><?= $label ?></small><strong><?= e($row[$key] ?: '-') ?></strong></div><?php endforeach ?></div>
+<div class="status-grid"><?php foreach (['dh' => 'DH LINE UP', 'mine' => 'MINE DISPATCH', 'ftw' => 'FTW TERISI'] as $key => $label): ?><div><small><?= $label ?></small><?php chip($row[$key]) ?></div><?php endforeach ?><div><small>HASIL PENGECEKAN</small><?php status_pill($row) ?></div></div>
+<div class="evidence-columns detail-evidence"><?php evidence('BUKTI FTW', $row['proof_ftw']); evidence('DOKUMENTASI MINE DISPATCH', $row['proof_mine']) ?></div>
+<div class="notes-panel"><h3>Catatan / temuan</h3><p class="preserve-lines"><?= e($row['note'] ?: 'Belum ada catatan tambahan.') ?></p><div class="note-warning">Status sumber: <?= e($row['source_status'] ?: 'Belum diisi') ?>. Bukti visual tidak otomatis menandakan FTW terisi.</div></div>
+<p class="fineprint">Sumber: <?= e($row['source']) ?><?= $row['source_row'] ? ' • Baris ' . e($row['source_row']) : '' ?> • Diperbarui <?= e($row['updated_at']) ?> WIB • Versi <?= e($row['version']) ?></p>
+</section>

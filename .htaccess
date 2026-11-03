@@ -1,0 +1,9 @@
+Options -Indexes
+DirectoryIndex index.php
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule (^|/)\. - [F,L]
+</IfModule>
+<FilesMatch "(^\.|\.(sql|json|md|ini|log|bat|ps1)$)">
+    Require all denied
+</FilesMatch>
