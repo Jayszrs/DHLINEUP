@@ -17,6 +17,9 @@ if ($domain !== '' && !preg_match('/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]
 if (!is_dir($output) && !mkdir($output, 0700, true)) {
     throw new RuntimeException('Tidak dapat membuat folder paket deployment.');
 }
+if (!is_file(ROOT_PATH . '/dist/.htaccess')) {
+    file_put_contents(ROOT_PATH . '/dist/.htaccess', "Require all denied\n");
+}
 $tokenPath = $output . '/activation-code.txt';
 if (!is_file($tokenPath)) {
     file_put_contents($tokenPath, bin2hex(random_bytes(32)) . PHP_EOL, LOCK_EX);

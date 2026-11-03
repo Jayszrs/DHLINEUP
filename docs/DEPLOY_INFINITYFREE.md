@@ -14,7 +14,16 @@ Password hosting/database tidak dicatat di dokumen ini. Konfigurasi aktif ada di
 
 ## Data yang diunggah
 
-Sesuai pilihan pengguna, versi online mulai dengan **database kosong**. Schema enam tabel sudah diimpor melalui phpMyAdmin. Data 53 Line Up, 49 operator, 102 gambar bukti, tiga gambar referensi, akun lokal, audit lokal, dan unggahan lokal **tidak disertakan**.
+Data operasional lokal sudah diunggah ke versi online pada 3 November 2026:
+
+- **53 Line Up** beserta nama/NIK operator, status, catatan, dan referensi bukti.
+- **49 Master Operator**.
+- **54 catatan riwayat lokal**, ditandai `local_laragon` untuk membedakannya dari aktivitas online.
+- **102 gambar bukti** FTW/Mine Dispatch dan **3 gambar referensi**.
+
+Akun dan password online tetap dipertahankan. Akun/password lokal, konfigurasi lokal, dan pembatasan login tidak diimpor. Database online berisi 55 riwayat setelah migrasi, termasuk satu aktivitas setup online yang sudah ada sebelumnya. Tidak ada gambar unggahan tambahan di `storage/uploads` lokal saat snapshot dibuat.
+
+Backup database lokal, backup online sebelum impor, SQL migrasi, paket gambar, dan manifest tersedia secara privat di `dist/infinityfree/local-data-cda04e85ae77/`. Folder `dist` diabaikan Git dan diblokir dari akses Apache.
 
 ## Membuat akun aplikasi pertama
 
@@ -52,13 +61,25 @@ Jangan mengimpor ulang SQL untuk update kode biasa. Jangan mengunggah seluruh fo
 - Login InfinityFree memakai akun Google yang diminta pengguna.
 - Akun hosting aktif dan subdomain `ptdh.xo.je` tersedia.
 - Schema berhasil diimpor: phpMyAdmin melaporkan delapan query selesai.
-- Enam tabel tersedia; Line Up dan Master Operator kosong.
+- Enam tabel tersedia; data online sudah berisi 53 Line Up dan 49 Master Operator.
 - Paket aplikasi berhasil diunggah dan diekstrak ke `/htdocs`.
 - Konfigurasi database aktif disimpan lewat editor File Manager, tanpa mencetak password ke output.
-- Website menampilkan halaman setup FleetSync melalui HTTPS dengan koneksi MySQL berhasil.
+- Website menampilkan dashboard FleetSync melalui HTTPS dengan 53 Line Up, 12 Mine berstatus Ya, 41 Mine berstatus Tidak, dan 0 FTW berstatus Ya, sesuai snapshot lokal.
 - Permintaan langsung ke `/backend/config/local.php` ditolak dengan halaman 403.
 - Akses HTTP dialihkan ke HTTPS.
 - 62 tes integrasi lokal dan sembilan tes aktivasi/deployment lulus. Pengujian lokal memakai database sementara, bukan database online.
+- Migrasi data lulus 10 pemeriksaan pada database sementara: jumlah data, akun online tetap, impor ulang tanpa duplikat, perubahan online tidak tertimpa, serta checksum seluruh gambar dalam paket lokal.
+- phpMyAdmin melaporkan impor data berhasil, **162 query** selesai. Riwayat online menampilkan 55 baris aktivitas.
+- Galeri menampilkan **102 gambar bukti** dan tiga referensi, melalui route aplikasi yang memerlukan login.
+
+## Mengemas ulang data lokal
+
+```powershell
+& 'C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe' backend\cli\export-local-data.php
+& 'C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe' tests\data-migration.php
+```
+
+Paket data dipisahkan dari paket aplikasi. `local-images.zip` diekstrak ke `/htdocs`, sedangkan `local-data.sql` diimpor ke database melalui phpMyAdmin. Jangan upload file SQL atau backup ke direktori publik. SQL migrasi menambahkan data dan melewati identitas yang sudah ada, tanpa menghapus data online. Snapshot yang sama diberi penanda agar impor ulang tidak menggandakan riwayat.
 
 Pengujian aktivasi lokal:
 
