@@ -119,10 +119,11 @@ test('JavaScript app parity using a real isolated PostgreSQL engine',async t=>{
       assert.equal((await client.post('/logout').type('form').send({csrf})).headers.location,'/login');
       assert.equal((await client.get('/lineup')).headers.location,'/login');
     });
-    await t.test('IP login throttle survives new browser sessions',async()=>{
+    await t.test('login throttle is brief and survives new browser sessions',async()=>{
       const guest=request.agent(app),loginToken=token(await guest.get('/login'));
       for(let i=0;i<5;i++) assert.equal((await guest.post('/login').type('form').send({csrf:loginToken,username:'manager.updated',password:'wrong'})).status,422);
-      assert.equal((await guest.post('/login').type('form').send({csrf:loginToken,username:'manager.updated',password})).status,429);
+      const blocked=await guest.post('/login').type('form').send({csrf:loginToken,username:'manager.updated',password});
+      assert.equal(blocked.status,429);assert.ok(Number(blocked.headers['retry-after'])<=30);assert.ok(!blocked.text.includes('15 menit'));
     });
     await t.test('PHP bcrypt password hashes remain compatible',async()=>{
       const hash=(await bcrypt.hash(password,10)).replace(/^\$2b\$/,'$2y$');assert.equal(await passwordMatches(password,hash),true);assert.equal(await passwordMatches('wrong',hash),false);

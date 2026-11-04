@@ -31,13 +31,17 @@ export class Auth {
   }
   csrf(req) { if (!equal(req.session?.csrf, req.body?.csrf)) throw new HttpError(419, 'Sesi formulir berakhir. Muat ulang halaman lalu coba lagi.'); }
   async needsSetup() { return Number((await one(this.db, 'SELECT count(*) AS n FROM fleetsync.users')).n) === 0; }
-  attemptKey(req, prefix = 'login') { return `${prefix}:${digest(req.ip || req.socket.remoteAddress || 'unknown')}`; }
+  attemptKey(req, prefix = 'login', username = '') { return `${prefix}:v2:${digest(JSON.stringify([req.ip || req.socket.remoteAddress || 'unknown', username.toLowerCase()]))}`; }
   async checkAttempts(key) {
-    const row = await one(this.db, "SELECT * FROM fleetsync.login_attempts WHERE attempt_key=$1 AND last_attempt>now()-interval '15 minutes'", [key]);
-    if (row && row.attempts >= 5) throw new HttpError(429, 'Terlalu banyak percobaan. Tunggu 15 menit.');
+    const row = await one(this.db, "SELECT attempts,ceil(extract(epoch FROM last_attempt+interval '30 seconds'-now()))::integer AS retry_after FROM fleetsync.login_attempts WHERE attempt_key=$1 AND last_attempt>now()-interval '30 seconds'", [key]);
+    if (row && row.attempts >= 5) {
+      const error = new HttpError(429, `Beberapa percobaan belum cocok. Coba lagi dalam ${row.retry_after} detik, atau gunakan Lupa password.`);
+      error.retryAfter = Math.max(1, Number(row.retry_after));
+      throw error;
+    }
   }
   async failAttempt(key) {
-    await this.db.query("INSERT INTO fleetsync.login_attempts(attempt_key,attempts) VALUES($1,1) ON CONFLICT(attempt_key) DO UPDATE SET attempts=CASE WHEN fleetsync.login_attempts.last_attempt<now()-interval '15 minutes' THEN 1 ELSE fleetsync.login_attempts.attempts+1 END,last_attempt=now()", [key]);
+    await this.db.query("INSERT INTO fleetsync.login_attempts(attempt_key,attempts) VALUES($1,1) ON CONFLICT(attempt_key) DO UPDATE SET attempts=CASE WHEN fleetsync.login_attempts.last_attempt<=now()-interval '30 seconds' THEN 1 ELSE fleetsync.login_attempts.attempts+1 END,last_attempt=now()", [key]);
   }
   async setup(req, res) {
     if (this.production && (!this.activationHash || !equal(digest(text(req.body, 'activation_code', 128)), this.activationHash))) throw new HttpError(403, 'Kode aktivasi hosting tidak cocok.');
@@ -51,12 +55,56 @@ export class Auth {
     });
   }
   async login(req, res) {
-    const username = text(req.body, 'username', 80, true), password = text(req.body, 'password', 128, true), key = this.attemptKey(req);
+    const username = text(req.body, 'username', 80, true), password = text(req.body, 'password', 128, true), key = this.attemptKey(req, 'login', username);
     await this.checkAttempts(key);
     const user = await one(this.db, 'SELECT * FROM fleetsync.users WHERE lower(username)=lower($1)', [username]);
     const match = await passwordMatches(password, user?.password_hash || fakeHash);
     if (!user || !match) { await this.failAttempt(key); throw new HttpError(422, 'Username atau password tidak cocok.'); }
     await this.db.transaction(async tx => { await tx.query('DELETE FROM fleetsync.login_attempts WHERE attempt_key=$1', [key]); await audit(tx, user.id, 'login', 'user', user.id); await this.establish(req, res, user.id, tx); });
+  }
+  async createRecoveryCode(req) {
+    const key = this.attemptKey(req, `reauth-${req.user.id}`);
+    await this.checkAttempts(key);
+    const owner = await one(this.db, 'SELECT password_hash FROM fleetsync.users WHERE id=$1', [req.user.id]);
+    if (!owner || !await passwordMatches(text(req.body, 'current_password', 128, true), owner.password_hash)) {
+      await this.failAttempt(key);
+      throw new HttpError(422, 'Password Anda belum cocok. Kode pemulihan belum dibuat.');
+    }
+    const code = randomBytes(16).toString('hex');
+    await this.db.transaction(async tx => {
+      const current = await one(tx, 'SELECT password_hash FROM fleetsync.users WHERE id=$1 FOR UPDATE', [req.user.id]);
+      if (!current || current.password_hash !== owner.password_hash) throw new HttpError(409, 'Password baru saja berubah. Masuk kembali lalu coba lagi.');
+      await tx.query('INSERT INTO fleetsync.password_recovery(user_id,code_hash) VALUES($1,$2) ON CONFLICT(user_id) DO UPDATE SET code_hash=excluded.code_hash,created_at=now()', [req.user.id, digest(`${req.user.id}:${code}`)]);
+      await tx.query('DELETE FROM fleetsync.login_attempts WHERE attempt_key=$1', [key]);
+      await audit(tx, req.user.id, 'recovery_code_create', 'user', req.user.id);
+    });
+    return code.toUpperCase().match(/.{4}/g).join('-');
+  }
+  async resetPassword(req, res) {
+    const username = text(req.body, 'username', 80, true), password = newPassword(req.body);
+    const key = this.attemptKey(req, 'recovery', username);
+    await this.checkAttempts(key);
+    const code = text(req.body, 'recovery_code', 80, true).replace(/[\s-]/g, '').toLowerCase();
+    const owner = await one(this.db, 'SELECT u.id,r.code_hash FROM fleetsync.users u LEFT JOIN fleetsync.password_recovery r ON r.user_id=u.id WHERE lower(u.username)=lower($1)', [username]);
+    const codeHash = digest(`${owner?.id || 'missing'}:${code}`);
+    const matches = equal(codeHash, owner?.code_hash || '0'.repeat(64));
+    if (!owner?.code_hash || !/^[a-f0-9]{32}$/.test(code) || !matches) {
+      await this.failAttempt(key);
+      throw new HttpError(422, 'Username atau kode pemulihan tidak cocok, atau kode sudah digunakan.');
+    }
+    const passwordHash = await bcrypt.hash(password, 12);
+    await this.db.transaction(async tx => {
+      await tx.query('SELECT id FROM fleetsync.users WHERE id=$1 FOR UPDATE', [owner.id]);
+      const recovery = await one(tx, 'SELECT code_hash FROM fleetsync.password_recovery WHERE user_id=$1 FOR UPDATE', [owner.id]);
+      if (!equal(recovery?.code_hash, codeHash)) throw new HttpError(422, 'Username atau kode pemulihan tidak cocok, atau kode sudah digunakan.');
+      await tx.query('UPDATE fleetsync.users SET password_hash=$1 WHERE id=$2', [passwordHash, owner.id]);
+      await tx.query('DELETE FROM fleetsync.password_recovery WHERE user_id=$1', [owner.id]);
+      await tx.query('DELETE FROM fleetsync.sessions WHERE user_id=$1', [owner.id]);
+      await tx.query('DELETE FROM fleetsync.upload_tickets WHERE user_id=$1', [owner.id]);
+      await tx.query('DELETE FROM fleetsync.login_attempts WHERE attempt_key=ANY($1::text[])', [[key, this.attemptKey(req, 'login', username)]]);
+      await audit(tx, owner.id, 'password_reset', 'user', owner.id);
+      await this.establish(req, res, null, tx);
+    });
   }
   async flash(req, message) { await this.db.query('UPDATE fleetsync.sessions SET flash=$1 WHERE id=$2', [JSON.stringify({ message, type: 'success' }), req.session.id]); }
   async takeFlash(req) {

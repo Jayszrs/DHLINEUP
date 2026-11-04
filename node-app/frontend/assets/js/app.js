@@ -1,5 +1,35 @@
 'use strict';
 
+const retryNotice = document.querySelector('[data-retry-after]');
+if (retryNotice) {
+  const deadline = Date.now() + Number(retryNotice.dataset.retryAfter) * 1000;
+  const submit = document.querySelector('.auth-form button[type="submit"]');
+  if (submit) submit.disabled = true;
+  const timer = setInterval(() => {
+    const seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+    if (seconds) retryNotice.querySelector('[data-retry-count]').textContent = String(seconds);
+    else {
+      clearInterval(timer);
+      retryNotice.textContent = 'Silakan coba lagi sekarang.';
+      retryNotice.setAttribute('role', 'status');
+      if (submit) submit.disabled = false;
+    }
+  }, 1000);
+}
+
+const recoveryDownload = document.querySelector('#recovery-download');
+if (recoveryDownload) {
+  recoveryDownload.hidden = false;
+  recoveryDownload.addEventListener('click', () => {
+    const code = document.querySelector('#recovery-code').value;
+    const file = new Blob([`DH FleetSync - kode pemulihan pribadi\n\n${code}\n\nSimpan secara pribadi. Kode hanya bisa digunakan sekali melalui Lupa password.\n`], { type: 'text/plain;charset=utf-8' });
+    const address = URL.createObjectURL(file), link = document.createElement('a');
+    link.href = address;link.download = 'FleetSync-kode-pemulihan.txt';
+    document.body.append(link);link.click();link.remove();
+    setTimeout(() => URL.revokeObjectURL(address), 1000);
+  });
+}
+
 const sidebar = document.querySelector('#sidebar');
 const navToggle = document.querySelector('#nav-toggle');
 const navBackdrop = document.querySelector('#nav-backdrop');

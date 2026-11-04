@@ -14,7 +14,7 @@ import { HEADERS,readSpreadsheet,exportRows,xlsx,csv } from './spreadsheet.js';
 const ROOT=fileURLToPath(new URL('../../',import.meta.url));
 const pages=['lineup','dashboard','detail','lineup-form','master','operator-form','dokumentasi','import','audit','profile','accounts'];
 const actions=['lineup-save','lineup-delete','operator-save','operator-delete','profile-save','account-create','logout','import'];
-const titles={'lineup':'DH Line Up',dashboard:'Dashboard',detail:'Detail Unit','lineup-form':'Form Line Up',master:'Master Operator','operator-form':'Form Operator',dokumentasi:'Dokumentasi',import:'Impor Data',audit:'Riwayat Perubahan',profile:'Profil Saya',accounts:'Kelola Akun',login:'Login',setup:'Buat Akun Pertama',error:'Kesalahan'};
+const titles={'lineup':'DH Line Up',dashboard:'Dashboard',detail:'Detail Unit','lineup-form':'Form Line Up',master:'Master Operator','operator-form':'Form Operator',dokumentasi:'Dokumentasi',import:'Impor Data',audit:'Riwayat Perubahan',profile:'Profil Saya',accounts:'Kelola Akun',login:'Login',setup:'Buat Akun Pertama','forgot-password':'Lupa Password','recovery-code':'Kode Pemulihan',error:'Kesalahan'};
 const url=(page='lineup',params={})=>'/'+page+(Object.keys(params).length?'?'+new URLSearchParams(Object.entries(params).filter(([,v])=>v!==undefined&&v!==null)).toString():'');
 const asset=name=>'/assets/'+name;
 const dateId=(value,short=false)=>value?new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:short?'short':'long',...(short?{}:{year:'numeric'}),timeZone:'Asia/Jakarta'}).format(new Date(String(value).slice(0,10)+'T00:00:00Z')):'-';
@@ -37,7 +37,7 @@ export function createApp({ db:providedDb, storage:providedStorage, production=B
   app.use(async(req,res,next)=>{const service=await getServices();Object.assign(req,service);await req.auth.session(req,res);next();});
   const view=async(req,res,page,data={})=>{
     const flash=await req.auth.takeFlash(req);
-    const locals={page,label:titles[page],user:req.user,csrf:req.session.csrf,flash,errorMessage:'',values:{},row:{},rows:[],filters:{},total:0,accounts:[],title:'',message:'',activationRequired:production,storageMode:req.storage.client?'signed':'local',url,asset,dateId,status,chipTone,evidenceUrl,ROLE,...validation,...data};
+    const locals={page,label:titles[page],user:req.user,csrf:req.session.csrf,flash,errorMessage:'',retryAfter:0,recoveryCreatedAt:null,recoveryCode:'',values:{},row:{},rows:[],filters:{},total:0,accounts:[],title:'',message:'',activationRequired:production,storageMode:req.storage.client?'signed':'local',url,asset,dateId,status,chipTone,evidenceUrl,ROLE,...validation,...data};
     const html=ejs.render(templates['layout.ejs'],locals,{filename:'fleetsync/layout.ejs',cache:production,includer(name){
       const key=name.replace(/^(\.\.\/)+/,'').replace(/\.ejs$/,'')+'.ejs';
       if(!Object.hasOwn(templates,key)) throw new Error('Template tidak ditemukan.');
@@ -50,19 +50,33 @@ export function createApp({ db:providedDb, storage:providedStorage, production=B
     const page=req.path.slice(1);
     if(await req.auth.needsSetup()) { if(page!=='setup') return res.redirect(303,url('setup')); }
     else if(page==='setup') return res.redirect(303,url(req.user?'lineup':'login'));
-    if(!req.user&&!['login','setup'].includes(page)) { if(req.path==='/upload-ticket') return res.status(401).json({error:'Silakan masuk kembali.'});return res.redirect(303,url('login')); }
-    if(req.user&&page==='login') return res.redirect(303,url('lineup'));
+    if(!req.user&&!['login','setup','forgot-password'].includes(page)) { if(req.path==='/upload-ticket') return res.status(401).json({error:'Silakan masuk kembali.'});return res.redirect(303,url('login')); }
+    if(req.user&&['login','forgot-password'].includes(page)) return res.redirect(303,url('lineup'));
     req.repo=new Repository(req.db,req.user?.id);next();
   });
-  for(const page of ['setup','login']) app.all('/'+page,async(req,res)=>{
+  for(const page of ['setup','login','forgot-password']) app.all('/'+page,async(req,res)=>{
     if(!['GET','POST','HEAD'].includes(req.method)) throw new validation.HttpError(405,'Metode tidak didukung.');
-    let errorMessage='';
+    let errorMessage='',retryAfter=0;
     if(req.method==='POST') {
       req.auth.csrf(req);
-      try { await req.auth[page](req,res);await req.auth.flash(req,page==='setup'?'Akun pertama berhasil dibuat.':'Login berhasil.');return res.redirect(303,url('lineup')); }
-      catch(error) { if(!error.status&&error.code!=='23505') throw error;res.status(error.status||409);errorMessage=error.code==='23505'?'Username sudah digunakan.':error.message; }
+      try {
+        await req.auth[page==='forgot-password'?'resetPassword':page](req,res);
+        await req.auth.flash(req,page==='setup'?'Akun pertama berhasil dibuat.':page==='forgot-password'?'Password berhasil diganti. Masuk dengan password baru, lalu buat kode pemulihan baru di Profil.':'Login berhasil.');
+        return res.redirect(303,url(page==='forgot-password'?'login':'lineup'));
+      }
+      catch(error) { if(!error.status&&error.code!=='23505') throw error;res.status(error.status||409);retryAfter=error.retryAfter||0;if(retryAfter) res.set('Retry-After',String(retryAfter));errorMessage=error.code==='23505'?'Username sudah digunakan.':error.message; }
     }
-    return view(req,res,page,{errorMessage,values:{name:typeof req.body?.name==='string'?req.body.name:'',username:typeof req.body?.username==='string'?req.body.username:''}});
+    return view(req,res,page,{errorMessage,retryAfter,values:{name:typeof req.body?.name==='string'?req.body.name:'',username:typeof req.body?.username==='string'?req.body.username:''}});
+  });
+  app.post('/recovery-create',async(req,res)=>{
+    req.auth.csrf(req);
+    try { const recoveryCode=await req.auth.createRecoveryCode(req);return view(req,res,'recovery-code',{recoveryCode}); }
+    catch(error) {
+      if(!error.status) throw error;
+      res.status(error.status);if(error.retryAfter) res.set('Retry-After',String(error.retryAfter));
+      const recovery=await one(req.db,'SELECT created_at FROM fleetsync.password_recovery WHERE user_id=$1',[req.user.id]);
+      return view(req,res,'profile',{values:req.user,recoveryCreatedAt:recovery?.created_at,errorMessage:error.message});
+    }
   });
   app.post('/upload-ticket',async(req,res)=>{req.auth.csrf(req);const ticket=await req.storage.issue(req.db,req.user,req.body);res.json(ticket);});
   app.get('/media',async(req,res)=>{
@@ -85,7 +99,7 @@ export function createApp({ db:providedDb, storage:providedStorage, production=B
     if(page==='lineup-form') data.row=req.query.id?await req.repo.lineup(validation.text(req.query,'id',80,true)):validation.blankLineup();
     if(page==='operator-form') data.row=req.query.id?await req.repo.operator(validation.recordId(req.query,'id',true)):{id:'',version:0,site:'BCP',name:'',nik:'',unit:'',equipment:'',last_date:new Date().toISOString().slice(0,10)};
     if(page==='audit') data.rows=await req.repo.auditRows();
-    if(page==='profile') data.values=req.user;
+    if(page==='profile') {data.values=req.user;data.recoveryCreatedAt=(await one(req.db,'SELECT created_at FROM fleetsync.password_recovery WHERE user_id=$1',[req.user.id]))?.created_at;}
     if(page==='accounts') data.accounts=(await req.db.query('SELECT id,name,username,created_at FROM fleetsync.users ORDER BY created_at,id')).rows;
     return view(req,res,page,data);
   });
@@ -127,9 +141,9 @@ export function createApp({ db:providedDb, storage:providedStorage, production=B
     } catch(error) {
       await Promise.allSettled(newFiles.map(name=>req.storage.remove(name)));
       if(!error.status&&error.code!=='23505') throw error;
-      res.status(error.status||409);const errorMessage=error.code==='23505'?(action.includes('account')||action==='profile-save'?'Username sudah digunakan.':'Data duplikat. Periksa identitas operator atau penugasan.'):error.message;
+      res.status(error.status||409);if(error.retryAfter) res.set('Retry-After',String(error.retryAfter));const errorMessage=error.code==='23505'?(action.includes('account')||action==='profile-save'?'Username sudah digunakan.':'Data duplikat. Periksa identitas operator atau penugasan.'):error.message;
       const values=Object.fromEntries(Object.entries(req.body).filter(([key,value])=>['name','username'].includes(key)&&typeof value==='string'));
-      if(action==='profile-save') return view(req,res,'profile',{values,errorMessage});
+      if(action==='profile-save') return view(req,res,'profile',{values,errorMessage,recoveryCreatedAt:(await one(req.db,'SELECT created_at FROM fleetsync.password_recovery WHERE user_id=$1',[req.user.id]))?.created_at});
       if(action==='account-create') return view(req,res,'accounts',{values,errorMessage,accounts:(await req.db.query('SELECT id,name,username,created_at FROM fleetsync.users ORDER BY created_at,id')).rows});
       if(action==='import') return view(req,res,'import',{errorMessage});
       if(['lineup-save','operator-save'].includes(action)) {
