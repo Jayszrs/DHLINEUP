@@ -5,7 +5,7 @@ import path from 'node:path';
 import ejs from 'ejs';
 import templates from '../../frontend/views.generated.js';
 import { database, initialize, audit, one } from './db.js';
-import { Auth, ROLE } from './auth.js';
+import { Auth, ROLE, accountVersion } from './auth.js';
 import { Mailer } from './mail.js';
 import { Recovery } from './recovery.js';
 import { Repository } from './repository.js';
@@ -14,9 +14,9 @@ import * as validation from './validation.js';
 import { HEADERS,readSpreadsheet,exportRows,xlsx,csv } from './spreadsheet.js';
 
 const ROOT=fileURLToPath(new URL('../../',import.meta.url));
-const pages=['lineup','dashboard','detail','lineup-form','master','operator-form','dokumentasi','import','audit','profile','accounts','account-reset'];
+const pages=['lineup','dashboard','detail','lineup-form','master','operator-form','dokumentasi','import','audit','profile','accounts','account-reset','account-edit'];
 const actions=['lineup-save','lineup-delete','operator-save','operator-delete','profile-save','account-create','logout','import'];
-const titles={'lineup':'DH Line Up',dashboard:'Dashboard',detail:'Detail Unit','lineup-form':'Form Line Up',master:'Master Operator','operator-form':'Form Operator',dokumentasi:'Dokumentasi',import:'Impor Data',audit:'Riwayat Perubahan',profile:'Profil Saya',accounts:'Kelola Akun','account-reset':'Reset Password Akun',login:'Login',setup:'Buat Akun Pertama','forgot-password':'Lupa Password','reset-password':'Password Baru',error:'Kesalahan'};
+const titles={'lineup':'DH Line Up',dashboard:'Dashboard',detail:'Detail Unit','lineup-form':'Form Line Up',master:'Master Operator','operator-form':'Form Operator',dokumentasi:'Dokumentasi',import:'Impor Data',audit:'Riwayat Perubahan',profile:'Profil Saya',accounts:'Kelola Akun','account-reset':'Reset Password Akun','account-edit':'Edit Profil & Role',login:'Login',setup:'Buat Akun Pertama','forgot-password':'Lupa Password','reset-password':'Password Baru',error:'Kesalahan'};
 const url=(page='lineup',params={})=>'/'+page+(Object.keys(params).length?'?'+new URLSearchParams(Object.entries(params).filter(([,v])=>v!==undefined&&v!==null)).toString():'');
 const asset=name=>'/assets/'+name;
 const dateId=(value,short=false)=>value?new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:short?'short':'long',...(short?{}:{year:'numeric'}),timeZone:'Asia/Jakarta'}).format(new Date(String(value).slice(0,10)+'T00:00:00Z')):'-';
@@ -39,7 +39,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
   app.use(async(req,res,next)=>{const service=await getServices();Object.assign(req,service);await req.auth.session(req,res);next();});
   const view=async(req,res,page,data={})=>{
     const flash=await req.auth.takeFlash(req);
-    const locals={page,label:titles[page],user:req.user,csrf:req.session.csrf,flash,errorMessage:'',retryAfter:0,recoverySettings:{},mailReady:req.mail.ready,values:{},row:{},rows:[],filters:{},total:0,accounts:[],title:'',message:'',activationRequired:production,storageMode:req.storage.client?'signed':'local',url,asset,dateId,status,chipTone,evidenceUrl,ROLE,...validation,...data};
+    const locals={page,label:titles[page],user:req.user,csrf:req.session.csrf,flash,errorMessage:'',retryAfter:0,recoverySettings:{},mailReady:req.mail.ready,values:{},row:{},rows:[],filters:{},total:0,accounts:[],title:'',message:'',activationRequired:production,storageMode:req.storage.client?'signed':'local',url,asset,dateId,status,chipTone,evidenceUrl,ROLE,accountVersion,...validation,...data};
     const html=ejs.render(templates['layout.ejs'],locals,{filename:'fleetsync/layout.ejs',cache:production,includer(name){
       const key=name.replace(/^(\.\.\/)+/,'').replace(/\.ejs$/,'')+'.ejs';
       if(!Object.hasOwn(templates,key)) throw new Error('Template tidak ditemukan.');
@@ -107,6 +107,22 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
       return view(req,res,'account-reset',{row,errorMessage:error.message});
     }
   });
+  app.post('/account-update',async(req,res)=>{
+    if(!req.user.is_admin) throw new validation.HttpError(403,'Hanya administrator yang dapat mengubah profil dan role akun lain.');
+    req.auth.csrf(req);
+    try {
+      const result=await req.auth.editAccount(req,res);
+      await req.auth.flash(req,`Profil dan role @${result.username} berhasil disimpan.${result.credentialsChanged?' Sesi akun tersebut sudah dikeluarkan.':''}${result.relogin?' Masuk kembali untuk melanjutkan.':''}`);
+      return res.redirect(303,url(result.relogin?'login':'accounts'));
+    } catch(error) {
+      if(!error.status&&error.code!=='23505') throw error;
+      const id=validation.recordId(req.body,'id',true),row=await one(req.db,'SELECT id,name,username,is_admin FROM fleetsync.users WHERE id=$1',[id]);
+      if(!row) throw new validation.HttpError(404,'Akun tidak ditemukan.');
+      res.status(error.status||409);if(error.retryAfter) res.set('Retry-After',String(error.retryAfter));
+      const values=Object.fromEntries(Object.entries(req.body).filter(([key,value])=>['name','username','role','account_version'].includes(key)&&typeof value==='string'));
+      return view(req,res,'account-edit',{row,values,errorMessage:error.code==='23505'?'Username sudah digunakan akun lain.':error.message});
+    }
+  });
   for(const action of ['recovery-email-save','recovery-email-verify']) app.post('/'+action,async(req,res)=>{
     req.auth.csrf(req);
     try {
@@ -149,6 +165,12 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
       if(String(id)===String(req.user.id)) return res.redirect(303,url('profile')+'#password-title');
       data.row=await one(req.db,'SELECT id,name,username FROM fleetsync.users WHERE id=$1',[id]);
       if(!data.row) throw new validation.HttpError(404,'Akun tidak ditemukan.');
+    }
+    if(page==='account-edit') {
+      if(!req.user.is_admin) throw new validation.HttpError(403,'Hanya administrator yang dapat mengubah profil dan role akun lain.');
+      data.row=await one(req.db,'SELECT id,name,username,is_admin FROM fleetsync.users WHERE id=$1',[validation.recordId(req.query,'id',true)]);
+      if(!data.row) throw new validation.HttpError(404,'Akun tidak ditemukan.');
+      data.values={name:data.row.name,username:data.row.username,role:data.row.is_admin?'Administrator':ROLE,account_version:accountVersion(data.row)};
     }
     return view(req,res,page,data);
   });

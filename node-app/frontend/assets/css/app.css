@@ -1230,7 +1230,7 @@ small {
 }
 .accounts-layout {
   display:grid;
-  grid-template-columns:minmax(0,1.2fr) minmax(340px,1fr);
+  grid-template-columns:minmax(0,1fr);
   gap:24px;
   align-items:start
 }
@@ -1239,7 +1239,31 @@ small {
   max-height:620px
 }
 .accounts-table .data-table {
-  min-width:490px
+  min-width:800px;
+  table-layout:auto
+}
+.accounts-layout>.editor-form {
+  width:100%;
+  max-width:760px
+}
+.accounts-layout>* {
+  min-width:0
+}
+.accounts-table th:first-child {
+  min-width:210px
+}
+.accounts-table .account-role {
+  min-width:136px;
+  white-space:nowrap
+}
+.account-actions {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  min-width:260px
+}
+.account-actions a {
+  white-space:nowrap
 }
 .account-note {
   padding:16px 18px;

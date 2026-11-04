@@ -44,6 +44,8 @@ Sesuai pilihan pengguna, pemulihan sementara dilakukan melalui administrator. Ak
 
 Flag `must_change_password` mengarahkan pengguna yang baru direset ke Profil, dan membatasi akses sampai password sementara diganti. Ganti password sendiri membutuhkan password saat ini dan konfirmasi password baru, mencabut seluruh sesi, lalu meminta login kembali. Edit profil mengubah nama/username akun sendiri dan tidak menerima perubahan hak administrator dari formulir.
 
+Administrator dapat mengubah nama, username, dan role akun lain maupun akun sendiri melalui Kelola Akun > Edit profil & role. Server mengonfirmasi password dan kewenangan administrator saat menyimpan. Perubahan username atau role mengeluarkan sesi target dan mencabut kode pemulihan yang tertunda. Audit menyimpan identitas sebelum/sesudah tanpa password. Pemeriksaan versi mencegah form lama menimpa perubahan terbaru. Semua perubahan role diserialkan lewat kunci baris bootstrap agar minimal satu administrator tetap ada; administrator terakhir tidak dapat diturunkan menjadi Pengelola.
+
 Migrasi schema menambah kolom `is_admin` dan `must_change_password` dengan default false; pemilik pertama menjadi administrator jika belum ada administrator. Jalankan CLI `backend/cli/init-db.js` dengan environment database tujuan sebelum deployment kode yang memakai kolom tersebut. Data operasional dan hash password yang sudah ada tidak diubah oleh migrasi schema.
 
 Implementasi email disimpan untuk penggunaan mendatang, tetapi SMTP saat ini tidak aktif dan tidak diperlukan untuk pemulihan lewat administrator. Website tetap memakai `dh-fleetsync.vercel.app`.
@@ -75,6 +77,6 @@ Panduan yang dibaca: https://vercel.com/get-started.md.
 
 ## Pemeriksaan
 
-31 tes integrasi lokal lulus, termasuk kewenangan administrator, reset/password sementara wajib diganti, ganti password sendiri, edit profil, verifikasi email, kode sekali pakai, pencabutan sesi dan pembatas login. Build lokal dan build deployment sebelumnya berhasil. HTTP online `/health`, `/login`, CSS dan font memberi status 200; font cocok dengan file pengguna. Pemeriksaan cloud memverifikasi 105 checksum, akses anonim yang ditolak, CORS, unggah langsung, tiket sekali pakai, dan akses gambar privat. Pemulihan lewat administrator tidak membutuhkan pengiriman email.
+37 tes integrasi lokal lulus, termasuk edit profil/role, kewenangan administrator, perlindungan administrator terakhir saat perubahan bersamaan, reset/password sementara wajib diganti, ganti password sendiri, verifikasi email, kode sekali pakai, pencabutan sesi dan pembatas login. Build lokal dan build deployment sebelumnya berhasil. HTTP online `/health`, `/login`, CSS dan font memberi status 200; font cocok dengan file pengguna. Pemeriksaan cloud memverifikasi 105 checksum, akses anonim yang ditolak, CORS, unggah langsung, tiket sekali pakai, dan akses gambar privat. Pemulihan lewat administrator tidak membutuhkan pengiriman email.
 
 Laporan teknis privat tersedia di `node-app/.private/cloud-verification.json`, `http-verification.json`, dan `integration.tap`. Snapshot privat berada di `node-app/.private/migration/local-snapshot.zip` dan tidak boleh dikirim sebagai source deployment. Kontrol Chrome belum dapat digunakan untuk verifikasi visual.

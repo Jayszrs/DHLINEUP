@@ -43,6 +43,8 @@ Menu **Lupa password** sementara mengarahkan pengguna untuk meminta bantuan admi
 
 Menu nama akun menyediakan **Edit profil** untuk nama/username dan **Ganti password** untuk mengganti password sendiri dengan konfirmasi password saat ini. Ganti password mencabut semua sesi dan meminta login kembali. Akun lain tetap memiliki akses Pengelola untuk operasi data dan pembuatan akun; hanya administrator yang dapat mereset password pengguna lain. Akun pertama menjadi administrator, dan migrasi akun lama menetapkan pemilik pertama sebagai administrator.
 
+Administrator juga dapat membuka **Kelola Akun > Edit profil & role** pada akun mana pun untuk mengubah nama, username, dan role **Pengelola/Administrator**. Penyimpanan membutuhkan password administrator. Perubahan username/role mencabut sesi akun yang diedit dan dicatat di audit. Form lama ditolak jika data sudah diubah administrator lain. Penurunan role administrator terakhir ditolak, termasuk saat beberapa perubahan dilakukan bersamaan.
+
 Kode pemulihan email tetap tersedia untuk penggunaan mendatang jika SMTP diaktifkan; pengiriman email saat ini tidak digunakan. Tidak ada App Password atau konfigurasi email tambahan yang diperlukan untuk alur administrator.
 
 Impor maksimal 10 MB/5.000 baris dan gambar maksimal 5 MB. Di Vercel, browser mengunggah file langsung ke Supabase menggunakan tiket sementara yang terikat pengguna. Backend memeriksa kembali jenis, ukuran, kepemilikan dan masa berlaku sebelum menyimpan data. Gambar yang dibuka memerlukan login lalu mendapat URL berumur singkat.
@@ -64,7 +66,7 @@ Ekspor hanya membaca MySQL sumber dan menyimpan paket privat. Import snapshot ya
 
 ## Validasi
 
-- `npm test`: 31 tes integrasi lulus memakai PostgreSQL sementara, termasuk reset oleh administrator, ganti password, pembatasan password sementara, edit profil, pemulihan email dan jeda login.
+- `npm test`: 37 tes integrasi lulus memakai PostgreSQL sementara, termasuk edit profil/role oleh administrator, pencegahan hilangnya administrator terakhir, reset password, password sementara wajib diganti, pemulihan email dan jeda login.
 - Build Vercel berhasil dan deployment berstatus READY.
 - Endpoint online `/health` mengembalikan HTTP 200 dengan runtime Node.
 - Halaman login, CSS, dan font online mengembalikan HTTP 200; font sama persis dengan file pengguna.

@@ -2,11 +2,12 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { parseCookie } from 'cookie';
 import bcrypt from 'bcryptjs';
 import { audit, one } from './db.js';
-import { HttpError, identity, newPassword, text, recordId } from './validation.js';
+import { HttpError, identity, newPassword, text, recordId, choice } from './validation.js';
 
 const random = () => randomBytes(32).toString('hex');
 const digest = value => createHash('sha256').update(value).digest('hex');
 export const ROLE = 'Pengelola';
+export const accountVersion = account => digest(JSON.stringify([String(account.id),account.name,account.username,Boolean(account.is_admin)]));
 export function equal(a, b) { return typeof a === 'string' && typeof b === 'string' && a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b)); }
 export async function passwordMatches(password, hash) { return bcrypt.compare(password, hash.replace(/^\$2y\$/, '$2b$')); }
 const fakeHash = '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
@@ -86,6 +87,33 @@ export class Auth {
       await this.failAttempt(key);throw new HttpError(422, 'Password Anda saat ini belum cocok. Perubahan belum disimpan.');
     }
     return { owner, key };
+  }
+  async editAccount(req, res) {
+    if (!req.user.is_admin) throw new HttpError(403, 'Hanya administrator yang dapat mengubah profil dan role akun lain.');
+    const id = recordId(req.body, 'id', true), { name, username } = identity(req.body);
+    const isAdmin = choice(req.body, 'role', ['Administrator', ROLE]) === 'Administrator';
+    const version = text(req.body, 'account_version', 64, true), { owner, key } = await this.confirmPassword(req);
+    if (!/^[a-f0-9]{64}$/.test(version)) throw new HttpError(422, 'Versi akun tidak valid. Muat ulang halaman lalu coba lagi.');
+    return this.db.transaction(async tx => {
+      await tx.query("SELECT setting_value FROM fleetsync.app_settings WHERE setting_key='bootstrap' FOR UPDATE");
+      const users = (await tx.query('SELECT id,name,username,is_admin,password_hash FROM fleetsync.users WHERE id=ANY($1::bigint[]) ORDER BY id FOR UPDATE', [[owner.id, id]])).rows;
+      const actor = users.find(user => String(user.id) === String(owner.id)), target = users.find(user => String(user.id) === String(id));
+      if (!actor?.is_admin || actor.password_hash !== owner.password_hash) throw new HttpError(403, 'Akses administrator berubah. Masuk kembali lalu coba lagi.');
+      if (!target) throw new HttpError(404, 'Akun tidak ditemukan.');
+      if (!equal(version, accountVersion(target))) throw new HttpError(409, 'Profil atau role akun sudah berubah. Muat ulang halaman sebelum menyimpan kembali.');
+      if (target.is_admin && !isAdmin && Number((await one(tx,'SELECT count(*) AS n FROM fleetsync.users WHERE is_admin')).n) <= 1) throw new HttpError(409, 'Administrator terakhir tidak dapat dijadikan Pengelola. Jadikan akun lain administrator terlebih dahulu.');
+      await tx.query('UPDATE fleetsync.users SET name=$1,username=$2,is_admin=$3 WHERE id=$4', [name, username, isAdmin, id]);
+      const credentialsChanged = target.username !== username || target.is_admin !== isAdmin;
+      if (credentialsChanged) await this.revokePasswordAccess(tx, target.id);
+      await tx.query('DELETE FROM fleetsync.login_attempts WHERE attempt_key=$1', [key]);
+      await audit(tx, actor.id, 'account_update', 'user', target.id, {
+        before: { name: target.name, username: target.username, role: target.is_admin ? 'Administrator' : ROLE },
+        after: { name, username, role: isAdmin ? 'Administrator' : ROLE }, sessions_revoked: credentialsChanged,
+      });
+      const relogin = credentialsChanged && String(actor.id) === String(target.id);
+      if (relogin) await this.establish(req, res, null, tx);
+      return { relogin, username, credentialsChanged };
+    });
   }
   async changePassword(req, res) {
     const password = newPassword(req.body), { owner, key } = await this.confirmPassword(req);
