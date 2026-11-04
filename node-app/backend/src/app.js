@@ -8,6 +8,7 @@ import { database, initialize, audit, one } from './db.js';
 import { Auth, ROLE, accountVersion, canEditData } from './auth.js';
 import { Mailer } from './mail.js';
 import { Recovery } from './recovery.js';
+import { equipmentOptions, addEquipmentOption, suggestedKind } from './catalog.js';
 import { Repository } from './repository.js';
 import { Storage } from './storage.js';
 import * as validation from './validation.js';
@@ -39,6 +40,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
   app.use(async(req,res,next)=>{const service=await getServices();Object.assign(req,service);await req.auth.session(req,res);next();});
   const view=async(req,res,page,data={})=>{
     const flash=await req.auth.takeFlash(req);
+    if(['lineup-form','operator-form'].includes(page)) {data.equipmentCatalog=await equipmentOptions(req.db);if(data.row&&!data.row.equipment_kind) data.row.equipment_kind=suggestedKind(data.row.unit);}
     const locals={page,label:titles[page],user:req.user,canEditData:canEditData(req.user),csrf:req.session.csrf,flash,errorMessage:'',retryAfter:0,recoverySettings:{},mailReady:req.mail.ready,values:{},row:{},rows:[],filters:{},total:0,accounts:[],title:'',message:'',activationRequired:production,storageMode:req.storage.client?'signed':'local',url,asset,dateId,status,chipTone,evidenceUrl,ROLE,accountVersion,...validation,...data};
     const html=ejs.render(templates['layout.ejs'],locals,{filename:'fleetsync/layout.ejs',cache:production,includer(name){
       const key=name.replace(/^(\.\.\/)+/,'').replace(/\.ejs$/,'')+'.ejs';
@@ -52,16 +54,16 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
     const page=req.path.slice(1);
     if(await req.auth.needsSetup()) { if(page!=='setup') return res.redirect(303,url('setup')); }
     else if(page==='setup') return res.redirect(303,url(req.user?'lineup':'login'));
-    if(!req.user&&!['login','setup','forgot-password','reset-password'].includes(page)) { if(req.path==='/upload-ticket') return res.status(401).json({error:'Silakan masuk kembali.'});return res.redirect(303,url('login')); }
+    if(!req.user&&!['login','setup','forgot-password','reset-password'].includes(page)) { if(['/upload-ticket','/equipment-option'].includes(req.path)) return res.status(401).json({error:'Silakan masuk kembali.'});return res.redirect(303,url('login')); }
     if(req.user&&['login','forgot-password','reset-password'].includes(page)) return res.redirect(303,url('lineup'));
     if(req.user?.must_change_password&&!['profile','password-change','logout'].includes(page)) {
-      if(page==='upload-ticket') return res.status(403).json({error:'Ganti password sementara di Profil sebelum melanjutkan.'});
+      if(['upload-ticket','equipment-option'].includes(page)) return res.status(403).json({error:'Ganti password sementara di Profil sebelum melanjutkan.'});
       return res.redirect(303,url('profile'));
     }
-    const mutation=['lineup-save','lineup-delete','operator-save','operator-delete','import','upload-ticket'].includes(page)&&req.method==='POST';
+    const mutation=['lineup-save','lineup-delete','operator-save','operator-delete','import','upload-ticket','equipment-option'].includes(page)&&req.method==='POST';
     const editor=['lineup-form','import'].includes(page)||(page==='operator-form'&&!req.query.id);
     if(req.user&&!canEditData(req.user)&&(mutation||editor)) {
-      if(page==='upload-ticket') return res.status(403).json({error:'Akun ini hanya memiliki akses lihat data.'});
+      if(['upload-ticket','equipment-option'].includes(page)) return res.status(403).json({error:'Akun ini hanya memiliki akses lihat data.'});
       throw new validation.HttpError(403,'Akun ini hanya dapat melihat dan mengekspor data. Hubungi administrator untuk perubahan Line Up atau Operator.');
     }
     req.repo=new Repository(req.db,req.user?.id);next();
@@ -142,6 +144,10 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
       return view(req,res,'profile',{values:req.user,recoverySettings:await req.recovery.settings(req.user.id),errorMessage:error.message});
     }
   });
+  app.post('/equipment-option',async(req,res)=>{
+    req.auth.csrf(req);
+    try {res.json({value:await addEquipmentOption(req.db,req.user.id,req.body)});} catch(error) {if(!error.status) throw error;res.status(error.status).json({error:error.message});}
+  });
   app.post('/upload-ticket',async(req,res)=>{req.auth.csrf(req);const ticket=await req.storage.issue(req.db,req.user,req.body);res.json(ticket);});
   app.get('/media',async(req,res)=>{
     const name=validation.text(req.query,'path',255,true);req.storage.valid(name);
@@ -194,7 +200,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
         const id=validation.text(req.body,'id',80);
         if(action==='lineup-save') {
           const row=validation.lineup(req.body),old=id?await new Repository(tx,req.user.id).lineup(id):validation.blankLineup();
-          for(const field of ['note','source_status']) if(!Object.hasOwn(req.body,field)) row[field]=old[field]||'';
+          for(const field of ['note','source_status','equipment_kind']) if(!Object.hasOwn(req.body,field)) row[field]=old[field]||'';
           for(const field of ['proof_ftw','proof_mine']) {
             let file=req.files?.[field]?.[0];
             if(req.body[field+'_ticket']) {const item=await req.storage.consume(tx,req.user,validation.text(req.body,field+'_ticket',64,true),field);temporary.push(item.temporaryPath);file={buffer:item.bytes};}
@@ -205,7 +211,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
           if(id) await req.repo.update(tx,id,validation.version(req.body),row);else saved=await req.repo.insert(tx,row);
           target='detail';params={id:saved};message='Line Up berhasil disimpan.';
         } else if(action==='lineup-delete') { await req.repo.delete(tx,id,validation.version(req.body));message='Line Up dihapus. Bukti arsip tetap tersimpan.'; }
-        else if(action==='operator-save') {const row=validation.operator(req.body);await req.repo.saveOperator(tx,row,validation.recordId(req.body),validation.version(req.body));target='master';params={site:row.site};message='Operator berhasil disimpan.';}
+        else if(action==='operator-save') {const row=validation.operator(req.body);if(!Object.hasOwn(req.body,'equipment_kind')&&id) row.equipment_kind=(await new Repository(tx,req.user.id).operator(id)).equipment_kind;await req.repo.saveOperator(tx,row,validation.recordId(req.body),validation.version(req.body));target='master';params={site:row.site};message='Operator berhasil disimpan.';}
         else if(action==='operator-delete') {await req.repo.deleteOperator(tx,validation.recordId(req.body,'id',true),validation.version(req.body));target='master';message='Operator berhasil dihapus.';}
         else if(action==='import') {
           let file=req.files?.spreadsheet?.[0],extension=file?path.extname(file.originalname).slice(1).toLowerCase():'';
@@ -226,7 +232,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
       if(action==='account-create') return view(req,res,'accounts',{values,errorMessage,accounts:(await req.db.query('SELECT id,name,username,created_at,is_admin,must_change_password,can_edit_data FROM fleetsync.users ORDER BY created_at,id')).rows});
       if(action==='import') return view(req,res,'import',{errorMessage});
       if(['lineup-save','operator-save'].includes(action)) {
-        const isLineup=action==='lineup-save',safeKeys=isLineup?['site','work_date','shift','type_category','unit','equipment','operator_name','nik','dh','mine','ftw','source_status','note']:['site','name','nik','unit','equipment','last_date'];
+        const isLineup=action==='lineup-save',safeKeys=isLineup?['site','work_date','shift','type_category','unit','equipment','equipment_kind','operator_name','nik','dh','mine','ftw','source_status','note']:['site','name','nik','unit','equipment','equipment_kind','last_date'];
         const id=validation.text(req.body,'id',80),base=id?await req.repo[isLineup?'lineup':'operator'](id):isLineup?validation.blankLineup():{id:'',version:0};
         const row={...base,...Object.fromEntries(Object.entries(req.body).filter(([key,value])=>safeKeys.includes(key)&&typeof value==='string')),version:req.body.version};
         return view(req,res,isLineup?'lineup-form':'operator-form',{row,errorMessage});
@@ -240,7 +246,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
     if(!error.status&&!(error instanceof multer.MulterError)) console.error('FleetSync request failed:',error.code||error.name);
     if(res.headersSent) return res.end();
     res.status(status);
-    if(req.path==='/upload-ticket') return res.json({error:message});
+    if(['/upload-ticket','/equipment-option'].includes(req.path)) return res.json({error:message});
     try { return await view(req,res,'error',{title:'Permintaan belum dapat diproses',message}); }
     catch { return res.type('html').send('<!doctype html><html lang="id"><meta charset="utf-8"><title>FleetSync</title><h1>Layanan belum siap</h1><p>Periksa konfigurasi database dan penyimpanan.</p></html>'); }
   });

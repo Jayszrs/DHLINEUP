@@ -1,6 +1,6 @@
 # DH FleetSync
 
-**Versi JavaScript tanpa PHP sudah online di https://dh-fleetsync.vercel.app/**, menggunakan Vercel dan Supabase pada akun `jaelanisurya.akademicrypto@gmail.com`. Source aktif versi baru ada di [node-app](node-app/README.md); panduannya di [deployment Vercel + Supabase](docs/DEPLOY_VERCEL_SUPABASE.md).
+**Versi JavaScript tanpa PHP sudah online di https://dhlineup.vercel.app/**, menggunakan Vercel dan Supabase pada akun `jaelanisurya.akademicrypto@gmail.com`. Source aktif versi baru ada di [node-app](node-app/README.md); panduannya di [deployment Vercel + Supabase](docs/DEPLOY_VERCEL_SUPABASE.md).
 
 Data yang dimigrasikan berasal dari snapshot lokal: 53 Line Up, 49 operator, satu akun, 102 bukti dan tiga referensi. Website InfinityFree dipensiunkan atas permintaan pengguna pada 4 November 2026. Source PHP dan petunjuk Laragon di bawah dipertahankan sebagai arsip versi sebelumnya. Database lama tidak tersinkron otomatis ke Supabase.
 

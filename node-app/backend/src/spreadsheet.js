@@ -4,10 +4,10 @@ import { parse } from 'csv-parse/sync';
 import path from 'node:path';
 import { HttpError, lineup } from './validation.js';
 
-export const HEADERS = ['Tanggal','Site','Shift','Type','Kode Alat','Jenis Alat','Nama Operator','NIK Operator','DH Line Up','Mine Dispatch','FTW Terisi','Status Sumber','Catatan'];
-const FIELDS = ['work_date','site','shift','type_category','unit','equipment','operator_name','nik','dh','mine','ftw','source_status','note'];
+export const HEADERS = ['Tanggal','Site','Shift','Type','Kode Alat','Tipe Alat','Nama Operator','NIK Operator','DH Line Up','Mine Dispatch','FTW Terisi','Status Sumber','Catatan','Jenis Alat'];
+const FIELDS = ['work_date','site','shift','type_category','unit','equipment','operator_name','nik','dh','mine','ftw','source_status','note','equipment_kind'];
 const normalize = s => String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
-const aliases = { work_date:['Tanggal','Date','work_date'],site:['Site','District'],shift:['Shift'],type_category:['Type','Kategori','type_category'],unit:['Kode Alat','Unit','kode_alat'],equipment:['Jenis Alat','equipment'],operator_name:['Nama Operator','Operator','operator_name'],nik:['NIK Operator','NIK'],dh:['DH Line Up','Terdata di DH Line Up','dh_line_up'],mine:['Mine Dispatch','Terdata di Mine Dispatch?','mine_dispatch'],ftw:['FTW Terisi','FTW Terisi?','ftw_terisi'],source_status:['Status Sumber','Status Verifikasi'],note:['Catatan','Note'] };
+const aliases = { work_date:['Tanggal','Date','work_date'],site:['Site','District'],shift:['Shift'],type_category:['Type','Kategori','type_category'],unit:['Kode Alat','Unit','kode_alat'],equipment:['Jenis Alat','Tipe Alat','equipment'],equipment_kind:['Kategori Alat','equipment_kind'],operator_name:['Nama Operator','Operator','operator_name'],nik:['NIK Operator','NIK'],dh:['DH Line Up','Terdata di DH Line Up','dh_line_up'],mine:['Mine Dispatch','Terdata di Mine Dispatch?','mine_dispatch'],ftw:['FTW Terisi','FTW Terisi?','ftw_terisi'],source_status:['Status Sumber','Status Verifikasi'],note:['Catatan','Note'] };
 const lookup = Object.fromEntries(Object.entries(aliases).flatMap(([k,list])=>list.map(v=>[normalize(v),k])));
 const array = value => value === undefined ? [] : Array.isArray(value) ? value : [value];
 const xml = new XMLParser({ ignoreAttributes:false,parseTagValue:false,parseAttributeValue:false,trimValues:false,removeNSPrefix:true,processEntities:true });
@@ -70,7 +70,8 @@ export function readSpreadsheet(buffer,extension) {
     for(const [i,cells] of data.rows.entries()) {
       if(cells.length>100) throw new HttpError(422,'Maksimal 100 kolom per impor.');
       if(!mapping) {
-        const candidate=cells.map(v=>lookup[normalize(v)]);
+        const hasModel=cells.some(v=>normalize(v)==='tipealat');
+        const candidate=cells.map(v=>hasModel&&normalize(v)==='jenisalat'?'equipment_kind':lookup[normalize(v)]);
         if(candidate.includes('work_date')&&candidate.includes('unit')) mapping=candidate;
         else if(i>=29) break;
         continue;
@@ -93,8 +94,8 @@ export function readSpreadsheet(buffer,extension) {
   } catch(error) { if(error instanceof HttpError) throw error; throw new HttpError(422,'File spreadsheet tidak dapat dibaca. Periksa format XLSX/CSV.'); }
 }
 export function exportRows(rows,kind='lineup') {
-  const master=kind==='master',fields=master?['site','name','nik','unit','equipment','last_date']:FIELDS;
-  return [master?['Site','Nama Operator','NIK','Unit Terakhir','Jenis Alat','Tanggal Terakhir']:HEADERS,...rows.map(row=>fields.map(k=>String(row[k]??'')))];
+  const master=kind==='master',fields=master?['site','name','nik','unit','equipment','last_date','equipment_kind']:FIELDS;
+  return [master?['Site','Nama Operator','NIK','Unit Terakhir','Tipe Alat','Tanggal Terakhir','Jenis Alat']:HEADERS,...rows.map(row=>fields.map(k=>String(row[k]??'')))];
 }
 const escapeXml=value=>String(value).replace(/[^\u0009\u000a\u000d\u0020-\ud7ff\ue000-\ufffd\u{10000}-\u{10ffff}]/gu,'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]));
 function col(i) { let value='';for(i++;i;i=Math.floor((i-1)/26)) value=String.fromCharCode(65+(i-1)%26)+value;return value; }

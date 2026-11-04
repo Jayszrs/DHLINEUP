@@ -1,12 +1,16 @@
 # DH FleetSync — JavaScript + Supabase
 
-Versi tanpa PHP sudah diterbitkan di **https://dh-fleetsync.vercel.app/** pada 4 November 2026. Project Vercel `jay-9d47/dh-fleetsync` milik `jaelanisurya.akademicrypto@gmail.com` terhubung ke Supabase Free melalui Vercel Marketplace.
+Versi tanpa PHP sudah diterbitkan di **https://dhlineup.vercel.app/** pada 4 November 2026. Project Vercel `jay-9d47/dh-fleetsync` milik `jaelanisurya.akademicrypto@gmail.com` terhubung ke Supabase Free melalui Vercel Marketplace.
 
 Repository GitHub `Jayszrs/DHLINEUP` sudah terhubung ke project tersebut. Branch production adalah `main` dan Root Directory Vercel adalah `node-app`. Perubahan yang didorong ke branch tersebut diproses oleh integrasi GitHub Vercel.
 
 Backend memakai Node.js 22 dan Express. Frontend memakai HTML/EJS, CSS, JavaScript, dan font TT Firs Neue Bold dari pengguna. Database memakai PostgreSQL pada schema privat `fleetsync`; gambar disimpan di bucket privat `fleetsync-private`.
 
 ## Menjalankan di laptop
+
+Alamat utama kini `https://dhlineup.vercel.app/`. Nomor unit, jenis alat, dan tipe alat pada form Line Up/Operator menggunakan dropdown yang bisa dicari. Daftar awal memuat 178 DT dari tab **Daftar Unit** pada [spreadsheet sumber](https://docs.google.com/spreadsheets/d/1fPeEBkAP2mKc-yXhDUnFvWpfi7OFw8CYuYygO1QKqmo/edit), ditambah unit dan model yang sudah tersimpan. Hanya nomor DT yang disalin; data kecepatan tidak diimpor dan spreadsheet tidak diubah.
+
+Jenis awal: Excavator, Dump Truck, Grader, Track Dozer. Tipe mencakup CAT 777 dan model lama; tombol Tambah dalam dropdown menyimpan pilihan bersama. Nilai baru juga masuk katalog saat Line Up/Operator disimpan. Kolom lama `equipment` tetap menyimpan tipe/model; `equipment_kind` menyimpan jenis. Impor format lama “Jenis Alat” tetap dibaca sebagai model; format baru membedakan “Jenis Alat” dan “Tipe Alat”.
 
 ```powershell
 cd node-app
@@ -74,7 +78,7 @@ Ekspor hanya membaca MySQL sumber dan menyimpan paket privat. Import snapshot ya
 
 ## Validasi
 
-- `npm test`: 44 tes integrasi lulus memakai PostgreSQL sementara, termasuk edit profil/role oleh administrator, pencegahan hilangnya administrator terakhir, reset password, password sementara wajib diganti, pemulihan email dan jeda login.
+- `npm test`: 45 tes integrasi lulus memakai PostgreSQL sementara, termasuk edit profil/role oleh administrator, pencegahan hilangnya administrator terakhir, reset password, password sementara wajib diganti, pemulihan email dan jeda login.
 - Build Vercel berhasil dan deployment berstatus READY.
 - Endpoint online `/health` mengembalikan HTTP 200 dengan runtime Node.
 - Halaman login, CSS, dan font online mengembalikan HTTP 200; font sama persis dengan file pengguna.

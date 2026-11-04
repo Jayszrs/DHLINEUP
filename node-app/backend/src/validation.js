@@ -27,13 +27,13 @@ export function filters(input) {
 }
 export function lineup(input) {
   const row = { site: choice(input, 'site', SITES), work_date: date(input, 'work_date'), shift: choice(input, 'shift', SHIFTS, SHIFTS[0]), type_category: choice(input, 'type_category', CATEGORIES, CATEGORIES[0]) };
-  for (const [key, max] of Object.entries({ unit: 60, equipment: 100, operator_name: 150, nik: 60, source_status: 150, note: 10000 })) row[key] = text(input, key, max, key === 'unit');
+  for (const [key, max] of Object.entries({ unit: 60, equipment: 100, equipment_kind: 100, operator_name: 150, nik: 60, source_status: 150, note: 10000 })) row[key] = text(input, key, max, key === 'unit');
   row.unit = row.unit.toUpperCase();
   for (const key of ['dh', 'mine', 'ftw']) row[key] = choice(input, key, STATUSES, 'Belum dicek');
   return row;
 }
 export function operator(input) {
-  return { site: choice(input, 'site', SITES), name: text(input, 'name', 150, true), nik: text(input, 'nik', 60, true), unit: text(input, 'unit', 60).toUpperCase(), equipment: text(input, 'equipment', 100), last_date: date(input, 'last_date', false) };
+  return { site: choice(input, 'site', SITES), name: text(input, 'name', 150, true), nik: text(input, 'nik', 60, true), unit: text(input, 'unit', 60).toUpperCase(), equipment: text(input, 'equipment', 100), equipment_kind: text(input, 'equipment_kind', 100), last_date: date(input, 'last_date', false) };
 }
 export function identity(input) {
   const name = text(input, 'name', 120, true), username = text(input, 'username', 80, true);
@@ -58,5 +58,5 @@ export function recordId(input, key = 'id', required = false) {
   return value;
 }
 export function blankLineup() {
-  return { id: '', version: 0, site: 'BCP', work_date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }), shift: SHIFTS[0], type_category: CATEGORIES[0], unit: '', equipment: '', operator_name: '', nik: '', dh: 'Ya', mine: 'Belum dicek', ftw: 'Belum dicek', source_status: '', note: '', proof_ftw: '', proof_mine: '' };
+  return { id: '', version: 0, site: 'BCP', work_date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }), shift: SHIFTS[0], type_category: CATEGORIES[0], unit: '', equipment: '', equipment_kind: '', operator_name: '', nik: '', dh: 'Ya', mine: 'Belum dicek', ftw: 'Belum dicek', source_status: '', note: '', proof_ftw: '', proof_mine: '' };
 }

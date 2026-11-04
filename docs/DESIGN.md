@@ -1,5 +1,7 @@
 # Arah tampilan DH FleetSync
 
+- Form penugasan memakai tiga pilihan yang dapat dicari: Nomor unit, Jenis alat, dan Tipe alat. Daftar DT berasal dari tab Daftar Unit pada spreadsheet pengguna (178 unit, 4 November 2026), digabung dengan unit yang sudah tersimpan. Model lama tetap menjadi Tipe alat; kategori disimpan terpisah. Dropdown mendukung tombol panah/Enter/Escape, pencarian teks, dan tombol menambah jenis/tipe di bagian bawah daftar. Opsi baru tersimpan untuk seluruh akun; akses perubahan tetap mengikuti izin data.
+
 Antarmuka operasional untuk memeriksa penugasan, Mine Dispatch, dan FTW. Penyempurnaan mengikuti permintaan pengguna: putih terang, mode gelap pilihan, navigasi hamburger, dan kontrol akun yang jelas.
 
 - ENERGY 2, RHYTHM 1, MOTION 1: kepadatan tabel terjaga, susunan konsisten, gerak terbatas pada interaksi.
