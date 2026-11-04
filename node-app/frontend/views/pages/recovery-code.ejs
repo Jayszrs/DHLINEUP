@@ -1,9 +1,0 @@
-<section class="editor-page" aria-labelledby="recovery-code-title">
-  <div class="page-title"><div><h2 id="recovery-code-title">Simpan kode pemulihan Anda</h2><p>Kode ini hanya ditampilkan sekarang. Kode lama sudah tidak berlaku.</p></div></div>
-  <div class="editor-form">
-    <p>Simpan di pengelola password atau tempat pribadi. Kode ini memberikan akses untuk mengganti password akun Anda.</p>
-    <label class="recovery-code-label">Kode untuk @<%= user.username %><input class="recovery-code" id="recovery-code" readonly value="<%= recoveryCode %>" autocomplete="off" spellcheck="false"></label>
-    <p class="muted">Gunakan satu kali melalui “Lupa password” di halaman login. Setelah dipakai, buat kode baru dari Profil.</p>
-    <div class="modal-actions"><button class="subtle-button" type="button" id="recovery-download" hidden>Unduh kode (.txt)</button><a class="btn primary" href="<%= url('profile') %>">Sudah saya simpan</a></div>
-  </div>
-</section>

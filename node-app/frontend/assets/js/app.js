@@ -17,19 +17,6 @@ if (retryNotice) {
   }, 1000);
 }
 
-const recoveryDownload = document.querySelector('#recovery-download');
-if (recoveryDownload) {
-  recoveryDownload.hidden = false;
-  recoveryDownload.addEventListener('click', () => {
-    const code = document.querySelector('#recovery-code').value;
-    const file = new Blob([`DH FleetSync - kode pemulihan pribadi\n\n${code}\n\nSimpan secara pribadi. Kode hanya bisa digunakan sekali melalui Lupa password.\n`], { type: 'text/plain;charset=utf-8' });
-    const address = URL.createObjectURL(file), link = document.createElement('a');
-    link.href = address;link.download = 'FleetSync-kode-pemulihan.txt';
-    document.body.append(link);link.click();link.remove();
-    setTimeout(() => URL.revokeObjectURL(address), 1000);
-  });
-}
-
 const sidebar = document.querySelector('#sidebar');
 const navToggle = document.querySelector('#nav-toggle');
 const navBackdrop = document.querySelector('#nav-backdrop');

@@ -1215,17 +1215,8 @@ small {
 .recovery-settings {
   margin-top:36px
 }
-.recovery-code-label {
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  margin-block:24px
-}
-.recovery-code {
-  font-family:Consolas,monospace;
-  font-size:16px;
-  width:100%;
-  min-width:0
+.recovery-verification {
+  margin-top:20px
 }
 .auth-form input {
   font-size:16px

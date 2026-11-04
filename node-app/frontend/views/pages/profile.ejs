@@ -3,11 +3,20 @@
 <label>Nama lengkap<input name="name" autocomplete="name" required maxlength="120" value="<%= values.name || '' %>"></label><label>Username<input name="username" autocomplete="username" required minlength="3" maxlength="80" pattern="[a-zA-Z0-9_.\-]{3,80}" value="<%= values.username || '' %>"><small>Huruf, angka, titik, garis bawah, atau tanda hubung.</small></label></div>
 <div class="modal-actions"><a class="subtle-button" href="<%= url('lineup') %>">Kembali</a><button class="btn primary" type="submit">Simpan profil</button></div></form></section>
 <section class="editor-page recovery-settings" aria-labelledby="recovery-title">
-  <div class="page-title"><div><h2 id="recovery-title">Pemulihan akun</h2><p>Simpan kode pribadi untuk mengganti password saat Anda lupa.</p></div></div>
-  <form class="editor-form" method="post" action="<%= url('recovery-create') %>">
+  <div class="page-title"><div><h2 id="recovery-title">Email pemulihan</h2><p>Verifikasi email untuk menerima kode saat Anda lupa password.</p></div></div>
+  <form class="editor-form" method="post" action="<%= url('recovery-email-save') %>">
     <input type="hidden" name="csrf" value="<%= csrf %>">
-    <p><%= recoveryCreatedAt ? 'Kode pemulihan sudah aktif. Membuat kode baru akan membatalkan kode sebelumnya.' : 'Belum ada kode pemulihan. Buat sekarang selagi Anda masih bisa masuk.' %></p>
-    <div class="form-grid"><label>Password saat ini<input type="password" name="current_password" required maxlength="128" autocomplete="current-password"><small>Konfirmasi bahwa Anda pemilik akun ini.</small></label></div>
-    <div class="modal-actions"><button class="btn primary" type="submit"><%= recoveryCreatedAt ? 'Buat kode pengganti' : 'Buat kode pemulihan' %></button></div>
+    <p><%= recoverySettings.email ? 'Email terverifikasi: '+recoverySettings.email : 'Belum ada email pemulihan yang diverifikasi.' %></p>
+    <% if(!mailReady) { %><p class="muted">Pengiriman email menunggu konfigurasi pengelola. Setelah aktif, Anda bisa mendaftarkan alamat di sini.</p><% } %>
+    <div class="form-grid"><label>Alamat email<input name="email" type="email" required maxlength="254" autocomplete="email" value="<%= recoverySettings.pending_email || recoverySettings.email || '' %>"></label><label>Password saat ini<input type="password" name="current_password" required maxlength="128" autocomplete="current-password"><small>Konfirmasi bahwa Anda pemilik akun ini.</small></label></div>
+    <div class="modal-actions"><button class="btn primary" type="submit" <%= !mailReady?'disabled':'' %>>Kirim kode verifikasi</button></div>
   </form>
+  <% if(recoverySettings.pending_email) { %>
+  <form class="editor-form recovery-verification" method="post" action="<%= url('recovery-email-verify') %>">
+    <input type="hidden" name="csrf" value="<%= csrf %>">
+    <h3>Verifikasi email</h3><p>Kode dikirim ke <strong><%= recoverySettings.pending_email %></strong>. Berlaku 10 menit. Email sebelumnya tetap aktif sampai verifikasi selesai.</p>
+    <div class="form-grid"><label>Kode dari email<input name="recovery_code" required maxlength="80" autocomplete="one-time-code" spellcheck="false"></label></div>
+    <div class="modal-actions"><button class="btn primary" type="submit">Verifikasi email</button></div>
+  </form>
+  <% } %>
 </section>
