@@ -8,6 +8,8 @@ Backend memakai Node.js 22 dan Express. Frontend memakai HTML/EJS, CSS, JavaScri
 
 ## Menjalankan di laptop
 
+Profil akun menyimpan nama lengkap, username, NIK karyawan sebagai teks (nol di depan dipertahankan), site BCP/ACP/KCP/SSCP, dan foto. Foto PNG/JPG/WebP maksimal 2 MB mendapat preview sebelum disimpan; hasil disimpan privat sebagai WebP maksimal 512×512 tanpa metadata EXIF. Foto tampil pada menu akun. Semua akun dapat memperbarui profil sendiri; izin data tetap terpisah. Administrator dapat memperbarui NIK/site akun lain melalui Edit Profil & Role. NIK/site lama tetap kosong sampai diisi pemilik/administrator.
+
 Alamat utama kini `https://dhlineup.vercel.app/`. Nomor unit, jenis alat, dan tipe alat pada form Line Up/Operator menggunakan dropdown yang bisa dicari. Daftar awal memuat 178 DT dari tab **Daftar Unit** pada [spreadsheet sumber](https://docs.google.com/spreadsheets/d/1fPeEBkAP2mKc-yXhDUnFvWpfi7OFw8CYuYygO1QKqmo/edit), ditambah unit dan model yang sudah tersimpan. Hanya nomor DT yang disalin; data kecepatan tidak diimpor dan spreadsheet tidak diubah.
 
 Jenis awal: Excavator, Dump Truck, Grader, Track Dozer. Tipe mencakup CAT 777 dan model lama; tombol Tambah dalam dropdown menyimpan pilihan bersama. Nilai baru juga masuk katalog saat Line Up/Operator disimpan. Kolom lama `equipment` tetap menyimpan tipe/model; `equipment_kind` menyimpan jenis. Impor format lama “Jenis Alat” tetap dibaca sebagai model; format baru membedakan “Jenis Alat” dan “Tipe Alat”.
@@ -78,7 +80,7 @@ Ekspor hanya membaca MySQL sumber dan menyimpan paket privat. Import snapshot ya
 
 ## Validasi
 
-- `npm test`: 45 tes integrasi lulus memakai PostgreSQL sementara, termasuk edit profil/role oleh administrator, pencegahan hilangnya administrator terakhir, reset password, password sementara wajib diganti, pemulihan email dan jeda login.
+- `npm test`: 51 tes integrasi lulus memakai PostgreSQL sementara, termasuk edit profil/role oleh administrator, pencegahan hilangnya administrator terakhir, reset password, password sementara wajib diganti, pemulihan email dan jeda login.
 - Build Vercel berhasil dan deployment berstatus READY.
 - Endpoint online `/health` mengembalikan HTTP 200 dengan runtime Node.
 - Halaman login, CSS, dan font online mengembalikan HTTP 200; font sama persis dengan file pengguna.

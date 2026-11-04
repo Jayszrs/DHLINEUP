@@ -94,6 +94,7 @@ document.querySelectorAll('[data-evidence-upload]').forEach((field) => {
   const input = field.querySelector('[data-evidence-file]'), preview = field.querySelector('[data-evidence-preview]');
   const status = field.querySelector('[data-evidence-status]'), clear = field.querySelector('[data-evidence-clear]');
   const remove = field.querySelector('[data-evidence-remove]'), label = field.dataset.label;
+  const noun=field.dataset.noun||'Bukti',maxBytes=Number(field.dataset.maxBytes)||5*1024*1024;
   let objectUrl = '';
   const release = () => { if (objectUrl) URL.revokeObjectURL(objectUrl);objectUrl = ''; };
   const showImage = (source, pending) => {
@@ -111,7 +112,7 @@ document.querySelectorAll('[data-evidence-upload]').forEach((field) => {
     if (existing && !remove?.checked) showImage(existing, false);
     else { preview.replaceChildren();preview.hidden = true; }
     status.classList.remove('error');
-    status.textContent = remove?.checked ? 'Bukti tersimpan akan dihapus ketika perubahan disimpan.' : existing ? 'Bukti tersimpan. Pilih gambar baru untuk menggantinya.' : 'Pilih gambar untuk melihat preview sebelum disimpan.';
+    status.textContent = remove?.checked ? `${noun} tersimpan akan dihapus ketika perubahan disimpan.` : existing ? `${noun} tersimpan. Pilih gambar baru untuk menggantinya.` : 'Pilih gambar untuk melihat preview sebelum disimpan.';
   };
   const rejectFile = (message) => {
     release();input.value = '';savedState();input.setCustomValidity(message);
@@ -121,7 +122,7 @@ document.querySelectorAll('[data-evidence-upload]').forEach((field) => {
     release();input.setCustomValidity('');
     const file = input.files[0];
     if (!file) { savedState();clear.hidden = true;return; }
-    if (file.size > 5 * 1024 * 1024) { rejectFile('Ukuran gambar maksimal 5 MB. Pilih gambar lain atau batalkan pilihan.');return; }
+    if (file.size > maxBytes) { rejectFile(`Ukuran gambar maksimal ${maxBytes/1024/1024} MB. Pilih gambar lain atau batalkan pilihan.`);return; }
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) && !(file.type === '' && /\.(png|jpe?g|webp)$/i.test(file.name))) {
       rejectFile('Gunakan gambar PNG, JPG, atau WebP. Pilih file lain atau batalkan pilihan.');return;
     }

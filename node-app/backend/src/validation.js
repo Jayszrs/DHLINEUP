@@ -35,6 +35,9 @@ export function lineup(input) {
 export function operator(input) {
   return { site: choice(input, 'site', SITES), name: text(input, 'name', 150, true), nik: text(input, 'nik', 60, true), unit: text(input, 'unit', 60).toUpperCase(), equipment: text(input, 'equipment', 100), equipment_kind: text(input, 'equipment_kind', 100), last_date: date(input, 'last_date', false) };
 }
+export function profileDetails(input,current={}) {
+  return {nik:Object.hasOwn(input,'nik')?text(input,'nik',60):current.nik||'',site:Object.hasOwn(input,'site')?choice(input,'site',['',...SITES],''):current.site||''};
+}
 export function identity(input) {
   const name = text(input, 'name', 120, true), username = text(input, 'username', 80, true);
   if (!/^[\w.-]{3,80}$/.test(username)) throw new HttpError(422, 'Username 3–80 karakter: huruf, angka, titik, garis bawah, atau tanda hubung.');

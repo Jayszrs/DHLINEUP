@@ -2,13 +2,13 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { parseCookie } from 'cookie';
 import bcrypt from 'bcryptjs';
 import { audit, one } from './db.js';
-import { HttpError, identity, newPassword, text, recordId, choice } from './validation.js';
+import { HttpError, identity, newPassword, text, recordId, choice, profileDetails } from './validation.js';
 
 const random = () => randomBytes(32).toString('hex');
 const digest = value => createHash('sha256').update(value).digest('hex');
 export const ROLE = 'Pengelola';
 export const canEditData = user => Boolean(user && (user.is_admin || user.can_edit_data));
-export const accountVersion = account => digest(JSON.stringify([String(account.id),account.name,account.username,Boolean(account.is_admin)]));
+export const accountVersion = account => digest(JSON.stringify([String(account.id),account.name,account.username,Boolean(account.is_admin),account.nik||'',account.site||'']));
 export function equal(a, b) { return typeof a === 'string' && typeof b === 'string' && a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b)); }
 export async function passwordMatches(password, hash) { return bcrypt.compare(password, hash.replace(/^\$2y\$/, '$2b$')); }
 const fakeHash = '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
@@ -20,7 +20,7 @@ export class Auth {
     let session = /^[a-f0-9]{64}$/.test(cookie || '') ? await one(this.db, 'SELECT * FROM fleetsync.sessions WHERE id=$1 AND expires_at>now()', [digest(cookie)]) : null;
     if (!session) session = await this.establish(req, res, null);
     req.session = session;
-    req.user = session.user_id ? await one(this.db, 'SELECT id,name,username,created_at,is_admin,must_change_password,can_edit_data FROM fleetsync.users WHERE id=$1', [session.user_id]) : null;
+    req.user = session.user_id ? await one(this.db, 'SELECT id,name,username,created_at,is_admin,must_change_password,can_edit_data,nik,site,profile_photo FROM fleetsync.users WHERE id=$1', [session.user_id]) : null;
     if (req.user) await this.db.query("UPDATE fleetsync.sessions SET expires_at=now()+interval '8 hours' WHERE id=$1", [session.id]);
   }
   async establish(req, res, userId, db = this.db) {
@@ -76,9 +76,15 @@ export class Auth {
     return row?.flash;
   }
   async logout(req, res) { await audit(this.db, req.user.id, 'logout', 'user', req.user.id); await this.db.query('DELETE FROM fleetsync.sessions WHERE id=$1', [req.session.id]); res.clearCookie(this.cookieName, { path: '/', secure: this.production, httpOnly: true, sameSite: 'lax' }); }
-  async saveProfile(req) {
-    const { name, username } = identity(req.body);
-    await this.db.transaction(async tx => { await tx.query('UPDATE fleetsync.users SET name=$1,username=$2 WHERE id=$3', [name, username, req.user.id]); await audit(tx, req.user.id, 'profile_update', 'user', req.user.id, { username }); });
+  async saveProfile(req,preparePhoto=async()=>undefined) {
+    const {name,username}=identity(req.body);
+    await this.db.transaction(async tx=>{
+      const current=await one(tx,'SELECT nik,site,profile_photo FROM fleetsync.users WHERE id=$1 FOR UPDATE',[req.user.id]);
+      if(!current) throw new HttpError(404,'Akun tidak ditemukan.');
+      const {nik,site}=profileDetails(req.body,current),photo=await preparePhoto(tx);
+      await tx.query('UPDATE fleetsync.users SET name=$1,username=$2,nik=$3,site=$4,profile_photo=$5 WHERE id=$6',[name,username,nik,site,photo===undefined?current.profile_photo:photo,req.user.id]);
+      await audit(tx,req.user.id,'profile_update','user',req.user.id,{username,nik,site,photo_changed:photo!==undefined});
+    });
   }
   async confirmPassword(req) {
     const key = this.attemptKey(req, `reauth-${req.user.id}`);
@@ -97,19 +103,20 @@ export class Auth {
     if (!/^[a-f0-9]{64}$/.test(version)) throw new HttpError(422, 'Versi akun tidak valid. Muat ulang halaman lalu coba lagi.');
     return this.db.transaction(async tx => {
       await tx.query("SELECT setting_value FROM fleetsync.app_settings WHERE setting_key='bootstrap' FOR UPDATE");
-      const users = (await tx.query('SELECT id,name,username,is_admin,password_hash FROM fleetsync.users WHERE id=ANY($1::bigint[]) ORDER BY id FOR UPDATE', [[owner.id, id]])).rows;
+      const users = (await tx.query('SELECT id,name,username,is_admin,password_hash,nik,site FROM fleetsync.users WHERE id=ANY($1::bigint[]) ORDER BY id FOR UPDATE', [[owner.id, id]])).rows;
       const actor = users.find(user => String(user.id) === String(owner.id)), target = users.find(user => String(user.id) === String(id));
       if (!actor?.is_admin || actor.password_hash !== owner.password_hash) throw new HttpError(403, 'Akses administrator berubah. Masuk kembali lalu coba lagi.');
       if (!target) throw new HttpError(404, 'Akun tidak ditemukan.');
       if (!equal(version, accountVersion(target))) throw new HttpError(409, 'Profil atau role akun sudah berubah. Muat ulang halaman sebelum menyimpan kembali.');
       if (target.is_admin && !isAdmin && Number((await one(tx,'SELECT count(*) AS n FROM fleetsync.users WHERE is_admin')).n) <= 1) throw new HttpError(409, 'Administrator terakhir tidak dapat dijadikan Pengelola. Jadikan akun lain administrator terlebih dahulu.');
-      await tx.query('UPDATE fleetsync.users SET name=$1,username=$2,is_admin=$3 WHERE id=$4', [name, username, isAdmin, id]);
+      const {nik,site}=profileDetails(req.body,target);
+      await tx.query('UPDATE fleetsync.users SET name=$1,username=$2,is_admin=$3,nik=$4,site=$5 WHERE id=$6', [name,username,isAdmin,nik,site,id]);
       const credentialsChanged = target.username !== username || target.is_admin !== isAdmin;
       if (credentialsChanged) await this.revokePasswordAccess(tx, target.id);
       await tx.query('DELETE FROM fleetsync.login_attempts WHERE attempt_key=$1', [key]);
       await audit(tx, actor.id, 'account_update', 'user', target.id, {
-        before: { name: target.name, username: target.username, role: target.is_admin ? 'Administrator' : ROLE },
-        after: { name, username, role: isAdmin ? 'Administrator' : ROLE }, sessions_revoked: credentialsChanged,
+        before: { name: target.name, username: target.username, nik:target.nik,site:target.site, role: target.is_admin ? 'Administrator' : ROLE },
+        after: { name, username, nik,site, role: isAdmin ? 'Administrator' : ROLE }, sessions_revoked: credentialsChanged,
       });
       const relogin = credentialsChanged && String(actor.id) === String(target.id);
       if (relogin) await this.establish(req, res, null, tx);

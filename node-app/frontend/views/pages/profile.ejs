@@ -1,8 +1,9 @@
 <% if(user.must_change_password) { %><div class="alert" role="status">Anda masuk menggunakan password sementara dari administrator. Ganti password terlebih dahulu untuk melanjutkan pekerjaan.</div><% } %>
 <% if(!user.must_change_password) { %>
-<section class="editor-page"><div class="page-title"><div><h2>Edit profil</h2><p>Perbarui nama yang tampil dan username untuk masuk.</p></div><span class="chip muted"><%= user.is_admin?'Administrator':ROLE %></span></div>
-<form class="editor-form" method="post" action="<%= url('profile-save') %>" data-saving><input type="hidden" name="csrf" value="<%= csrf %>"><div class="form-grid">
-<label>Nama lengkap<input name="name" autocomplete="name" required maxlength="120" value="<%= values.name || '' %>"></label><label>Username<input name="username" autocomplete="username" required minlength="3" maxlength="80" pattern="[a-zA-Z0-9_.\-]{3,80}" value="<%= values.username || '' %>"><small>Huruf, angka, titik, garis bawah, atau tanda hubung.</small></label></div>
+<section class="editor-page"><div class="page-title"><div><h2>Edit profil</h2><p>Lengkapi foto, nama lengkap, NIK, dan site Anda.</p></div><span class="chip muted"><%= user.is_admin?'Administrator':ROLE %></span></div>
+<form class="editor-form" method="post" action="<%= url('profile-save') %>" enctype="multipart/form-data" data-saving><input type="hidden" name="csrf" value="<%= csrf %>"><div class="profile-editor"><%- include('../profile-photo') %><div class="form-grid profile-identity">
+<label>Nama lengkap<input name="name" autocomplete="name" required maxlength="120" value="<%= values.name || '' %>"></label><label>Username<input name="username" autocomplete="username" required minlength="3" maxlength="80" pattern="[a-zA-Z0-9_.\-]{3,80}" value="<%= values.username || '' %>"><small>Huruf, angka, titik, garis bawah, atau tanda hubung.</small></label>
+<label>NIK<input name="nik" maxlength="60" value="<%= values.nik || '' %>" autocomplete="off"><small>Nomor induk karyawan, termasuk angka nol di depan.</small></label><label>Site<select name="site"><option value="">Belum diisi</option><%- include('../options',{values:SITES,selected:values.site}) %></select></label></div></div>
 <div class="modal-actions"><a class="subtle-button" href="<%= url('lineup') %>">Kembali</a><button class="btn primary" type="submit">Simpan profil</button></div></form></section>
 <% } %>
 <section class="editor-page recovery-settings" aria-labelledby="password-title">

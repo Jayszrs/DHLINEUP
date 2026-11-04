@@ -1,0 +1,9 @@
+<div class="profile-photo-field" data-evidence-upload data-noun="Foto profil" data-current-url="<%= user.profile_photo?avatarUrl(user):'' %>" data-label="foto profil" data-max-bytes="2097152">
+  <div class="profile-photo-heading"><div><h3>Foto profil</h3><p>Foto ini tampil pada menu akun Anda.</p></div><span class="profile-photo-initial" aria-hidden="true"><%= [...user.name][0]?.toUpperCase() %></span></div>
+  <div class="upload-preview profile-photo-preview" data-evidence-preview <%= !user.profile_photo?'hidden':'' %>><% if(user.profile_photo) { %><a href="<%= avatarUrl(user) %>" data-lightbox aria-label="Perbesar foto profil"><img src="<%= avatarUrl(user) %>" alt="Foto profil Anda"></a><% } %></div>
+  <label for="profile-photo">Pilih foto profil</label><input type="file" id="profile-photo" name="profile_photo" accept="image/png,image/jpeg,image/webp" data-evidence-file aria-describedby="profile-photo-help profile-photo-status">
+  <small id="profile-photo-help">PNG, JPG, atau WebP. Maksimal 2 MB. Preview dapat diperbesar.</small>
+  <p class="upload-preview-status" id="profile-photo-status" data-evidence-status role="status"><%= user.profile_photo?'Foto profil tersimpan. Pilih foto baru untuk menggantinya.':'Pilih foto untuk melihat preview sebelum disimpan.' %></p>
+  <button type="button" class="subtle-button" data-evidence-clear data-evidence-control hidden>Batalkan pilihan foto</button>
+  <% if(user.profile_photo) { %><label class="checkbox-label"><input type="checkbox" name="remove_profile_photo" value="1" data-evidence-remove data-evidence-control>Hapus foto saat menyimpan profil</label><% } %>
+</div>

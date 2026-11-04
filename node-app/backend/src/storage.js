@@ -32,8 +32,8 @@ export class Storage {
   }
   async issue(db,user,input) {
     if(!this.client) throw new HttpError(400,'Unggah lokal melalui formulir.');
-    const kind=choice(input,'kind',['proof_ftw','proof_mine','spreadsheet']), extension=text(input,'extension',8).toLowerCase(),size=Number(input.size);
-    if(!Number.isSafeInteger(size)||size<=0||size>(kind==='spreadsheet'?10:5)*1024*1024) throw new HttpError(422,'Ukuran unggahan melebihi batas.');
+    const kind=choice(input,'kind',['proof_ftw','proof_mine','spreadsheet','profile_photo']), extension=text(input,'extension',8).toLowerCase(),size=Number(input.size);
+    if(!Number.isSafeInteger(size)||size<=0||size>(kind==='spreadsheet'?10:kind==='profile_photo'?2:5)*1024*1024) throw new HttpError(422,'Ukuran unggahan melebihi batas.');
     if(!(kind==='spreadsheet'?['xlsx','csv']:['png','jpg','jpeg','webp']).includes(extension)) throw new HttpError(422,'Format unggahan tidak didukung.');
     const pending=await one(db,'SELECT count(*) AS n FROM fleetsync.upload_tickets WHERE user_id=$1 AND consumed_at IS NULL AND expires_at>now()',[user.id]);
     if(Number(pending.n)>=20) throw new HttpError(429,'Terlalu banyak unggahan tertunda. Coba lagi nanti.');
@@ -48,17 +48,19 @@ export class Storage {
     const ticket=await one(db,'SELECT * FROM fleetsync.upload_tickets WHERE id=$1 AND user_id=$2 AND kind=$3 AND expires_at>now() AND consumed_at IS NULL FOR UPDATE',[id,user.id,kind]);
     if(!ticket) throw new HttpError(422,'Unggahan sudah digunakan atau kedaluwarsa. Pilih ulang file.');
     const bytes=await this.get(ticket.path);
-    if(bytes.length>(kind==='spreadsheet'?10:5)*1024*1024) throw new HttpError(422,'Ukuran unggahan melebihi batas.');
+    if(bytes.length>(kind==='spreadsheet'?10:kind==='profile_photo'?2:5)*1024*1024) throw new HttpError(422,'Ukuran unggahan melebihi batas.');
     await db.query('UPDATE fleetsync.upload_tickets SET consumed_at=now() WHERE id=$1',[id]);
     return {bytes,extension:ticket.extension,temporaryPath:ticket.path};
   }
-  async image(bytes) {
+  async image(bytes,{avatar=false}={}) {
+    if(avatar&&bytes.length>2*1024*1024) throw new HttpError(422,'Foto profil maksimal 2 MB.');
     if(!bytes.length||bytes.length>5*1024*1024) throw new HttpError(422,'Gambar maksimal 5 MB.');
     let metadata;
     try { metadata=await sharp(bytes,{limitInputPixels:40000000}).metadata();await sharp(bytes,{limitInputPixels:40000000}).stats(); } catch { throw new HttpError(422,'File gambar tidak valid.'); }
-    const extension={jpeg:'jpg',png:'png',webp:'webp'}[metadata.format];
+    let extension={jpeg:'jpg',png:'png',webp:'webp'}[metadata.format];
     if(!extension) throw new HttpError(422,'Gunakan gambar PNG, JPG, atau WebP.');
+    if(avatar) {bytes=await sharp(bytes,{limitInputPixels:40000000}).rotate().resize({width:512,height:512,fit:'inside',withoutEnlargement:true}).webp({quality:85}).toBuffer();extension='webp';}
     const name=`uploads/${randomBytes(24).toString('hex')}.${extension}`;
-    await this.put(name,bytes,`image/${metadata.format}`);return name;
+    await this.put(name,bytes,avatar?'image/webp':`image/${metadata.format}`);return name;
   }
 }
