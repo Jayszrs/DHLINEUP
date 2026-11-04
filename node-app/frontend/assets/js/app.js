@@ -74,19 +74,71 @@ themeToggle?.addEventListener('click', () => {
 syncThemeLabel();
 
 const dialog = document.querySelector('#image-dialog');
-document.querySelectorAll('[data-lightbox]').forEach((link) => {
-  link.addEventListener('click', (event) => {
+document.addEventListener('click', (event) => {
+    const link = event.target.closest('a[data-lightbox]');
+    if (!link) return;
     event.preventDefault();
-    const image = document.querySelector('#image-full');
+    const image = new Image();
+    image.id = 'image-full';
     image.src = link.href;
     image.alt = link.querySelector('img')?.alt || link.textContent.trim();
+    document.querySelector('#image-slot').replaceChildren(image);
     document.querySelector('#image-title').textContent = image.alt;
     dialog.showModal();
-  });
 });
 document.querySelector('#image-close')?.addEventListener('click', () => dialog.close());
 dialog?.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
-dialog?.addEventListener('close', () => { document.querySelector('#image-full').removeAttribute('src'); });
+dialog?.addEventListener('close', () => { document.querySelector('#image-slot').replaceChildren(); });
+
+document.querySelectorAll('[data-evidence-upload]').forEach((field) => {
+  const input = field.querySelector('[data-evidence-file]'), preview = field.querySelector('[data-evidence-preview]');
+  const status = field.querySelector('[data-evidence-status]'), clear = field.querySelector('[data-evidence-clear]');
+  const remove = field.querySelector('[data-evidence-remove]'), label = field.dataset.label;
+  let objectUrl = '';
+  const release = () => { if (objectUrl) URL.revokeObjectURL(objectUrl);objectUrl = ''; };
+  const showImage = (source, pending) => {
+    const link = document.createElement('a'), image = new Image();
+    link.href = source;link.dataset.lightbox = '';link.setAttribute('aria-label', `Perbesar ${label}`);
+    image.alt = `Preview ${label}${pending ? ' yang akan diunggah' : ' yang tersimpan'}`;
+    if (pending) {
+      image.onload = () => { image.dataset.previewReady = 'true'; };
+      image.onerror = () => { if (objectUrl === source) rejectFile('Gambar tidak dapat dibaca. Pilih PNG, JPG, atau WebP yang valid.'); };
+    }
+    image.src = source;link.append(image);preview.replaceChildren(link);preview.hidden = false;
+  };
+  const savedState = () => {
+    const existing = field.dataset.currentUrl;
+    if (existing && !remove?.checked) showImage(existing, false);
+    else { preview.replaceChildren();preview.hidden = true; }
+    status.classList.remove('error');
+    status.textContent = remove?.checked ? 'Bukti tersimpan akan dihapus ketika perubahan disimpan.' : existing ? 'Bukti tersimpan. Pilih gambar baru untuk menggantinya.' : 'Pilih gambar untuk melihat preview sebelum disimpan.';
+  };
+  const rejectFile = (message) => {
+    release();input.value = '';savedState();input.setCustomValidity(message);
+    status.textContent = message;status.classList.add('error');clear.hidden = false;
+  };
+  input.addEventListener('change', () => {
+    release();input.setCustomValidity('');
+    const file = input.files[0];
+    if (!file) { savedState();clear.hidden = true;return; }
+    if (file.size > 5 * 1024 * 1024) { rejectFile('Ukuran gambar maksimal 5 MB. Pilih gambar lain atau batalkan pilihan.');return; }
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) && !(file.type === '' && /\.(png|jpe?g|webp)$/i.test(file.name))) {
+      rejectFile('Gunakan gambar PNG, JPG, atau WebP. Pilih file lain atau batalkan pilihan.');return;
+    }
+    if (remove) remove.checked = false;
+    objectUrl = URL.createObjectURL(file);showImage(objectUrl, true);
+    status.classList.remove('error');status.textContent = `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} KB · Belum disimpan`;
+    clear.hidden = false;
+  });
+  clear.addEventListener('click', () => {
+    if (input.form.dataset.submitting === 'true') return;
+    release();input.value = '';input.setCustomValidity('');clear.hidden = true;savedState();
+  });
+  remove?.addEventListener('change', () => {
+    release();input.value = '';input.setCustomValidity('');clear.hidden = true;savedState();
+  });
+  window.addEventListener('pagehide', (event) => { if (!event.persisted) release(); });
+});
 
 document.querySelectorAll('[data-dismiss]').forEach((button) => button.addEventListener('click', () => button.closest('.alert').remove()));
 document.querySelectorAll('[data-back]').forEach((button) => button.addEventListener('click', () => { window.history.length > 1 ? window.history.back() : window.location.assign('/lineup'); }));
@@ -105,6 +157,10 @@ document.querySelectorAll('form[data-saving]').forEach((form) => {
     const inputs = [...form.querySelectorAll('input[type="file"]')].filter(input => input.files.length);
     if (document.body.dataset.uploadMode === 'signed' && inputs.length) {
       event.preventDefault();
+      form.querySelectorAll('[data-evidence-remove]:checked').forEach(input => {
+        const field = document.createElement('input');field.type = 'hidden';field.name = input.name;field.value = input.value;field.dataset.uploadTicket = 'true';form.append(field);
+      });
+      form.querySelectorAll('input[type="file"], [data-evidence-control]').forEach(input => { input.disabled = true; });
       const loading = document.querySelector('#loading-status');
       try {
         for (const input of inputs) {
@@ -126,7 +182,7 @@ document.querySelectorAll('form[data-saving]').forEach((form) => {
         HTMLFormElement.prototype.submit.call(form);
       } catch (error) {
         form.dataset.submitting = 'false';
-        form.querySelectorAll('button[type="submit"], input[type="file"]').forEach(input => { input.disabled = false; });
+        form.querySelectorAll('button[type="submit"], input[type="file"], [data-evidence-control]').forEach(input => { input.disabled = false; });
         form.querySelectorAll('[data-upload-ticket]').forEach(input => input.remove());
         loading.hidden = true;
         const alert = document.createElement('div'); alert.className = 'alert error'; alert.setAttribute('role', 'alert'); alert.textContent = error.message;
@@ -141,6 +197,7 @@ window.addEventListener('pageshow', () => {
     form.dataset.submitting = 'false';
     form.querySelectorAll('button[type="submit"]').forEach((button) => { button.disabled = false; });
     form.querySelectorAll('input[type="file"]').forEach(input => { input.disabled = false; });
+    form.querySelectorAll('[data-evidence-control]').forEach(input => { input.disabled = false; });
     form.querySelectorAll('[data-upload-ticket]').forEach(input => input.remove());
   });
 });

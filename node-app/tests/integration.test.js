@@ -59,7 +59,7 @@ test('JavaScript app parity using a real isolated PostgreSQL engine',async t=>{
       const saved=await one(db,'SELECT * FROM fleetsync.lineups WHERE id=$1',[id]);assert.equal(saved.unit,'QA-01');assert.equal(saved.nik,'00001234');proof=saved.proof_mine;
       assert.ok(proof.startsWith('uploads/'));
       const media=await client.get('/media').query({path:proof});assert.equal(media.status,200);assert.deepEqual(media.body,png);
-      const detail=await client.get('/detail').query({id});assert.equal(detail.status,200);assert.ok(detail.text.includes('&lt;script&gt;'));assert.ok(!detail.text.includes('<script>alert(1)'));
+      const detail=await client.get('/detail').query({id});assert.equal(detail.status,200);assert.ok(!detail.text.includes('Catatan / temuan'));assert.ok(!detail.text.includes('Status sumber:'));assert.ok(!detail.text.includes('<script>alert(1)'));
       const master=await one(db,'SELECT * FROM fleetsync.operators WHERE nik=$1',['00001234']);operatorId=String(master.id);assert.equal(master.name,'QA Operator');
     });
     await t.test('optimistic locking and duplicate assignment protection',async()=>{
@@ -117,6 +117,16 @@ test('JavaScript app parity using a real isolated PostgreSQL engine',async t=>{
       const colleagueToken=token(await colleague.get('/accounts'));
       assert.equal((await colleague.post('/account-create').type('form').send({...data,csrf:colleagueToken,name:'Third',username:'third',current_password:data.password})).status,303);
       const audit=await client.get('/audit');assert.ok(audit.text.includes('account_create'));assert.ok(!audit.text.includes(data.password));
+    });
+    await t.test('simplified lineup form offers image previews and preserves omitted legacy metadata',async()=>{
+      const before=await one(db,'SELECT * FROM fleetsync.lineups WHERE id=$1',[id]);
+      const form=await client.get('/lineup-form?id='+id);
+      assert.equal(form.status,200);assert.ok(!form.text.includes('name="note"'));assert.ok(!form.text.includes('name="source_status"'));
+      assert.equal((form.text.match(/data-evidence-upload /g)||[]).length,2);assert.ok(form.text.includes('data-evidence-clear'));assert.ok(form.text.includes('data-current-url="/media?path='));
+      assert.ok(form.headers['content-security-policy'].includes("img-src 'self' blob:"));
+      const {note,source_status,...fields}=row;
+      const result=await client.post('/lineup-save').type('form').send({...fields,csrf,id,version:before.version});assert.equal(result.status,303);
+      const after=await one(db,'SELECT * FROM fleetsync.lineups WHERE id=$1',[id]);assert.equal(after.note,before.note);assert.equal(after.source_status,before.source_status);assert.equal(after.proof_mine,before.proof_mine);
     });
     await t.test('private routes and logout revoke access',async()=>{
       const guest=request.agent(app);assert.equal((await guest.get('/accounts')).headers.location,'/login');assert.equal((await guest.get('/media').query({path:proof})).headers.location,'/login');

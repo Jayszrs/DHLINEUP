@@ -55,6 +55,8 @@ Kode pemulihan email tetap tersedia untuk penggunaan mendatang jika SMTP diaktif
 
 Impor maksimal 10 MB/5.000 baris dan gambar maksimal 5 MB. Di Vercel, browser mengunggah file langsung ke Supabase menggunakan tiket sementara yang terikat pengguna. Backend memeriksa kembali jenis, ukuran, kepemilikan dan masa berlaku sebelum menyimpan data. Gambar yang dibuka memerlukan login lalu mendapat URL berumur singkat.
 
+Form dan detail Line Up tidak lagi menampilkan Status Sumber/Catatan. Nilai historis tetap tersimpan dan tidak dikosongkan jika kedua kolom tidak dikirim saat edit; kompatibilitas impor/ekspor data lama tetap tersedia. Bukti FTW dan Mine Dispatch menampilkan preview lokal segera setelah gambar dipilih, dengan nama/ukuran file, status belum disimpan, tombol batal dan pembesaran gambar. Preview tidak mengunggah file sebelum Simpan. Bukti lama ditampilkan saat edit dan kembali muncul jika pilihan penggantinya dibatalkan. Validasi browser menolak format selain PNG/JPG/WebP, gambar yang tidak dapat dibaca, dan ukuran lebih dari 5 MB; validasi backend tetap berlaku.
+
 ## Data migrasi
 
 Snapshot **database lokal Laragon** sudah dimasukkan: 53 Line Up, 49 operator, satu akun `jayszrs`, 54 riwayat, 102 bukti, dan tiga referensi gambar. Setelah migrasi, kredensial akun pemilik `jayszrs` dipulihkan dari backup akun FleetSync online lama di InfinityFree. Gunakan password FleetSync online lama; akun ini terpisah dari Google, GitHub, Vercel, dan Supabase. Password tetap disimpan sebagai hash.
@@ -72,7 +74,7 @@ Ekspor hanya membaca MySQL sumber dan menyimpan paket privat. Import snapshot ya
 
 ## Validasi
 
-- `npm test`: 43 tes integrasi lulus memakai PostgreSQL sementara, termasuk edit profil/role oleh administrator, pencegahan hilangnya administrator terakhir, reset password, password sementara wajib diganti, pemulihan email dan jeda login.
+- `npm test`: 44 tes integrasi lulus memakai PostgreSQL sementara, termasuk edit profil/role oleh administrator, pencegahan hilangnya administrator terakhir, reset password, password sementara wajib diganti, pemulihan email dan jeda login.
 - Build Vercel berhasil dan deployment berstatus READY.
 - Endpoint online `/health` mengembalikan HTTP 200 dengan runtime Node.
 - Halaman login, CSS, dan font online mengembalikan HTTP 200; font sama persis dengan file pengguna.

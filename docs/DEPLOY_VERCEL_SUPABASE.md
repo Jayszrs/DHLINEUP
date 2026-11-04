@@ -58,6 +58,10 @@ Label Master Operator diganti menjadi Operator; URL `/master` tetap kompatibel d
 
 Aset `dh-symbol.png` adalah pemulihan resolusi tinggi berlatar transparan dari referensi pengguna. Logo sidebar/login menyatukan simbol dengan tulisan DH yang mengikuti warna tema, sedangkan favicon memakai simbol saja. REA memverifikasi tampilan dan klik menggunakan fixture lokal yang terpisah dari data operasional.
 
+Form/detail Line Up menyembunyikan Status Sumber dan Catatan. Backend mempertahankan nilai historis ketika kedua field tidak dikirim, sehingga edit penugasan tidak mengosongkan data lama. Pilihan file FTW/Mine memakai object URL lokal untuk preview sebelum Simpan; CSP mengizinkan `blob:` hanya pada `img-src`. Object URL dilepas saat pilihan diganti/dibatalkan atau dokumen dibuang. Pembesaran gambar mendukung preview baru dan bukti tersimpan. Saat unggah langsung berlangsung, kontrol bukti dikunci dan checkbox hapus bukti diteruskan sebagai field tersembunyi agar kombinasi upload/penghapusan tetap tersimpan.
+
+REA memverifikasi dua preview bersamaan, pembesaran desktop/ponsel gelap, validasi format/ukuran, pembatalan yang memulihkan bukti lama, serta kombinasi unggah FTW dan hapus bukti Mine. Skenario memakai File API dengan file sintetis pada fixture lokal; tidak membuka file pribadi atau mengunggah bukti ke produksi. Laporannya ada di `node-app/.private/evidence-preview-ui.json`.
+
 ## Memperbarui aplikasi
 
 Integrasi GitHub sudah terhubung melalui akun Vercel tujuan. Commit perubahan yang relevan lalu push ke `main` dari folder repository:
@@ -85,6 +89,6 @@ Panduan yang dibaca: https://vercel.com/get-started.md.
 
 ## Pemeriksaan
 
-43 tes integrasi lokal lulus, termasuk edit profil/role, kewenangan administrator, perlindungan administrator terakhir saat perubahan bersamaan, reset/password sementara wajib diganti, ganti password sendiri, verifikasi email, kode sekali pakai, pencabutan sesi dan pembatas login. Build lokal dan build deployment sebelumnya berhasil. HTTP online `/health`, `/login`, CSS dan font memberi status 200; font cocok dengan file pengguna. Pemeriksaan cloud memverifikasi 105 checksum, akses anonim yang ditolak, CORS, unggah langsung, tiket sekali pakai, dan akses gambar privat. Pemulihan lewat administrator tidak membutuhkan pengiriman email.
+44 tes integrasi lokal lulus, termasuk edit profil/role, kewenangan administrator, perlindungan administrator terakhir saat perubahan bersamaan, reset/password sementara wajib diganti, ganti password sendiri, verifikasi email, kode sekali pakai, pencabutan sesi dan pembatas login. Build lokal dan build deployment sebelumnya berhasil. HTTP online `/health`, `/login`, CSS dan font memberi status 200; font cocok dengan file pengguna. Pemeriksaan cloud memverifikasi 105 checksum, akses anonim yang ditolak, CORS, unggah langsung, tiket sekali pakai, dan akses gambar privat. Pemulihan lewat administrator tidak membutuhkan pengiriman email.
 
 Laporan teknis privat tersedia di `node-app/.private/cloud-verification.json`, `http-verification.json`, `data-access-migration.json`, dan laporan tes. Snapshot privat berada di `node-app/.private/migration/local-snapshot.zip` dan tidak boleh dikirim sebagai source deployment. REA berhasil memeriksa fixture lokal memakai Chrome terpisah; kontrol tab Chrome pengguna melalui CUA masih bermasalah.
