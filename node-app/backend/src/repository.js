@@ -13,7 +13,7 @@ export class Repository {
   }
   async lineup(id) { return await one(this.db, 'SELECT * FROM fleetsync.lineups WHERE id=$1', [id]) || Promise.reject(new HttpError(404, 'Data Line Up tidak ditemukan.')); }
   async operators(filters = {}) { return (await this.db.query("SELECT * FROM fleetsync.operators WHERE site=$1 AND concat_ws(' ',name,nik,unit,equipment) ILIKE $2 ORDER BY name,id", [filters.site || 'BCP', `%${filters.search || ''}%`])).rows; }
-  async operator(id) { return await one(this.db, 'SELECT * FROM fleetsync.operators WHERE id=$1', [id]) || Promise.reject(new HttpError(404, 'Master Operator tidak ditemukan.')); }
+  async operator(id) { return await one(this.db, 'SELECT * FROM fleetsync.operators WHERE id=$1', [id]) || Promise.reject(new HttpError(404, 'Operator tidak ditemukan.')); }
   async syncOperator(db, row) {
     if (!row.nik) return;
     await db.query(`INSERT INTO fleetsync.operators(site,nik,name,unit,equipment,last_date) VALUES($1,$2,$3,$4,$5,$6)
@@ -47,10 +47,9 @@ export class Repository {
   }
   async deleteOperator(db,id,version) {
     const row=await one(db,'SELECT * FROM fleetsync.operators WHERE id=$1 FOR UPDATE',[id]);
-    if (!row) throw new HttpError(404,'Master Operator tidak ditemukan.');
-    if (Number((await one(db,'SELECT count(*) AS n FROM fleetsync.lineups WHERE site=$1 AND nik=$2',[row.site,row.nik])).n)) throw new HttpError(409,'Operator masih memiliki riwayat Line Up dan tidak dapat dihapus.');
+    if (!row) throw new HttpError(404,'Operator tidak ditemukan.');
     if (!(await db.query('DELETE FROM fleetsync.operators WHERE id=$1 AND version=$2 RETURNING id',[id,version])).rows.length) throw new HttpError(409,'Profil sudah berubah. Muat ulang formulir.');
-    await audit(db,this.actor,'delete','operator',id);
+    await audit(db,this.actor,'delete','operator',id,{before:{site:row.site,name:row.name,nik:row.nik,unit:row.unit,equipment:row.equipment,last_date:row.last_date},lineup_history_preserved:true});
   }
   async auditRows() { return (await this.db.query('SELECT a.*,u.name AS user_name FROM fleetsync.audit_logs a LEFT JOIN fleetsync.users u ON u.id=a.user_id ORDER BY a.id DESC LIMIT 200')).rows; }
 }

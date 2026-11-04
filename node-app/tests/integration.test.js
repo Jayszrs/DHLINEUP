@@ -74,8 +74,11 @@ test('JavaScript app parity using a real isolated PostgreSQL engine',async t=>{
       assert.equal((await req.attach('proof_ftw',Buffer.from('not an image'),'fake.png')).status,422);
       assert.equal(Number((await one(db,"SELECT count(*) AS n FROM fleetsync.lineups WHERE unit='QA-FAKE'")).n),0);
     });
-    await t.test('master operators retain leading zeros and reject unsafe deletes',async()=>{
-      assert.equal((await client.post('/operator-delete').type('form').send({csrf,id:operatorId,version:2})).status,409);
+    await t.test('operators retain leading zeros and deleting a profile preserves lineup history',async()=>{
+      assert.equal((await client.post('/operator-delete').type('form').send({csrf,id:operatorId,version:1})).status,409);
+      assert.equal((await client.post('/operator-delete').type('form').send({csrf,id:operatorId,version:2})).status,303);
+      assert.equal(await one(db,'SELECT id FROM fleetsync.operators WHERE id=$1',[operatorId]),undefined);
+      const preserved=await one(db,'SELECT operator_name,nik FROM fleetsync.lineups WHERE id=$1',[id]);assert.equal(preserved.operator_name,'QA Operator');assert.equal(preserved.nik,'00001234');assert.equal((await client.get('/detail?id='+id)).status,200);
       const data={csrf,id:'',version:0,site:'ACP',name:'Second Operator',nik:'00000099',unit:'unit-2',equipment:'EX',last_date:'2026-11-04'};
       assert.equal((await client.post('/operator-save').type('form').send(data)).status,303);
       const saved=await one(db,"SELECT * FROM fleetsync.operators WHERE site='ACP'");assert.equal(saved.nik,'00000099');
@@ -108,6 +111,7 @@ test('JavaScript app parity using a real isolated PostgreSQL engine',async t=>{
       data.current_password=password;assert.equal((await client.post('/account-create').type('form').send(data)).status,303);
       assert.equal((await client.post('/account-create').type('form').send(data)).status,409);
       assert.equal((await client.post('/profile-save').type('form').send({csrf,name:'Conflicting',username:'COLLEAGUE'})).status,409);
+      await db.query("UPDATE fleetsync.users SET can_edit_data=true WHERE username='colleague'");
       const colleague=request.agent(app);const login=await colleague.get('/login');assert.equal((await colleague.post('/login').type('form').send({csrf:token(login),username:'COLLEAGUE',password:data.password})).status,303);
       assert.equal((await colleague.get('/accounts')).status,200);assert.equal((await colleague.get('/lineup-form')).status,200);
       const colleagueToken=token(await colleague.get('/accounts'));

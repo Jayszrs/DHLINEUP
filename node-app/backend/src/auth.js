@@ -7,6 +7,7 @@ import { HttpError, identity, newPassword, text, recordId, choice } from './vali
 const random = () => randomBytes(32).toString('hex');
 const digest = value => createHash('sha256').update(value).digest('hex');
 export const ROLE = 'Pengelola';
+export const canEditData = user => Boolean(user && (user.is_admin || user.can_edit_data));
 export const accountVersion = account => digest(JSON.stringify([String(account.id),account.name,account.username,Boolean(account.is_admin)]));
 export function equal(a, b) { return typeof a === 'string' && typeof b === 'string' && a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b)); }
 export async function passwordMatches(password, hash) { return bcrypt.compare(password, hash.replace(/^\$2y\$/, '$2b$')); }
@@ -19,7 +20,7 @@ export class Auth {
     let session = /^[a-f0-9]{64}$/.test(cookie || '') ? await one(this.db, 'SELECT * FROM fleetsync.sessions WHERE id=$1 AND expires_at>now()', [digest(cookie)]) : null;
     if (!session) session = await this.establish(req, res, null);
     req.session = session;
-    req.user = session.user_id ? await one(this.db, 'SELECT id,name,username,created_at,is_admin,must_change_password FROM fleetsync.users WHERE id=$1', [session.user_id]) : null;
+    req.user = session.user_id ? await one(this.db, 'SELECT id,name,username,created_at,is_admin,must_change_password,can_edit_data FROM fleetsync.users WHERE id=$1', [session.user_id]) : null;
     if (req.user) await this.db.query("UPDATE fleetsync.sessions SET expires_at=now()+interval '8 hours' WHERE id=$1", [session.id]);
   }
   async establish(req, res, userId, db = this.db) {

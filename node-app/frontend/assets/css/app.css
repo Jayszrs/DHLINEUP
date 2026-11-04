@@ -15,6 +15,7 @@
   --surface:#fff;
   --surface-2:#f0f3f6;
   --ink:#182838;
+  --logo-ink:#17191b;
   --muted:#586a79;
   --line:#dce2e8;
   --accent:#b84d00;
@@ -37,6 +38,7 @@
   --surface:#1a2735;
   --surface-2:#233342;
   --ink:#edf2f6;
+  --logo-ink:#ffffff;
   --muted:#acbdca;
   --line:#354758;
   --accent:#ffab67;
@@ -149,23 +151,37 @@ small {
 }
 .brand {
   display:flex;
-  align-items:center;
-  gap:12px;
-  background:#192734;
-  padding:14px;
-  border-radius:8px;
-  margin-bottom:36px;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:10px;
+  padding:4px 12px 20px;
+  margin-bottom:24px;
   text-decoration:none!important
 }
 .brand img {
-  width:86px;
+  width:48px;
+  height:48px;
   object-fit:contain
+}
+.brand-signature {
+  display:inline-flex;
+  align-items:center;
+  gap:8px
+}
+.brand-wordmark {
+  font-family:'TT Firs Neue',sans-serif;
+  font-weight:700;
+  font-size:44px;
+  letter-spacing:-.035em;
+  line-height:1;
+  color:var(--logo-ink)
 }
 .brand-caption {
   font-family:'TT Firs Neue',sans-serif;
   font-size:10px;
   letter-spacing:.06em;
-  color:#ffa454
+  color:var(--accent);
+  text-transform:uppercase
 }
 .workspace-label {
   font-size:10px;
@@ -1158,17 +1174,61 @@ small {
 .guest-brand {
   display:flex;
   align-items:center;
-  gap:18px;
-  background:#192734;
-  color:#ffa454;
-  padding:18px 24px;
-  border-radius:8px;
-  margin-bottom:24px;
+  gap:20px;
+  padding:0;
+  margin-bottom:32px;
   font-family:'TT Firs Neue',sans-serif;
   font-size:12px
 }
 .guest-brand img {
-  width:100px
+  width:56px;
+  height:56px;
+  object-fit:contain
+}
+.record-link {
+  color:var(--ink);
+  text-decoration:underline;
+  text-decoration-color:var(--line);
+  text-underline-offset:4px;
+  text-decoration-thickness:1px
+}
+.record-link:hover {
+  color:var(--accent);
+  text-decoration-color:currentColor
+}
+.record-actions {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap
+}
+.record-actions form {
+  margin:0
+}
+.record-actions .table-action,.row-delete {
+  min-height:36px;
+  display:inline-flex;
+  align-items:center;
+  padding:6px 4px
+}
+.row-delete {
+  border:0;
+  border-radius:4px;
+  background:transparent;
+  color:var(--red);
+  font-size:12px
+}
+.row-delete:hover {
+  background:var(--red-bg)
+}
+.lineup-table {
+  min-width:1120px
+}
+.operator-table {
+  min-width:900px
+}
+.lineup-table th:last-child,.operator-table th:last-child {
+  min-width:165px
 }
 .guest-panel {
   width:min(100%,480px);

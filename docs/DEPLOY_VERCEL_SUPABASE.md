@@ -50,6 +50,14 @@ Migrasi schema menambah kolom `is_admin` dan `must_change_password` dengan defau
 
 Implementasi email disimpan untuk penggunaan mendatang, tetapi SMTP saat ini tidak aktif dan tidak diperlukan untuk pemulihan lewat administrator. Website tetap memakai `dh-fleetsync.vercel.app`.
 
+## Akses data dan identitas tampilan
+
+Kolom `users.can_edit_data` memiliki default false. Izin CRUD ditetapkan untuk ID akun yang saat migrasi bernama `jayszrs`, `tnazwar`, dan `yuliantobudi`; Administrator selalu memiliki izin penuh. Pengelola lain tetap bisa melihat/mengekspor Line Up dan Operator, tetapi form penambahan, impor, unggah, serta POST perubahan ditolak server dengan 403. Izin melekat ke ID dan tidak hilang saat username berubah. Pembuatan akun dan edit profil biasa tidak dapat menaikkan izin ini. Pembaruan izin tidak mengubah password atau role administrator yang sudah ada.
+
+Label Master Operator diganti menjadi Operator; URL `/master` tetap kompatibel dengan bookmark lama. Klik nama/unit Line Up membuka detail dan klik nama Operator membuka profil. Edit/Hapus tersedia pada tabel untuk akun yang berizin, dengan CSRF, konfirmasi penghapusan dan pemeriksaan versi tetap berlaku. Penghapusan profil Operator tidak mengubah riwayat Line Up yang menyimpan identitasnya sendiri. Audit menyimpan data profil sebelum dihapus. Profil dapat terbentuk kembali saat ada penugasan yang disimpan dengan NIK tersebut.
+
+Aset `dh-symbol.png` adalah pemulihan resolusi tinggi berlatar transparan dari referensi pengguna. Logo sidebar/login menyatukan simbol dengan tulisan DH yang mengikuti warna tema, sedangkan favicon memakai simbol saja. REA memverifikasi tampilan dan klik menggunakan fixture lokal yang terpisah dari data operasional.
+
 ## Memperbarui aplikasi
 
 Integrasi GitHub sudah terhubung melalui akun Vercel tujuan. Commit perubahan yang relevan lalu push ke `main` dari folder repository:
@@ -77,6 +85,6 @@ Panduan yang dibaca: https://vercel.com/get-started.md.
 
 ## Pemeriksaan
 
-37 tes integrasi lokal lulus, termasuk edit profil/role, kewenangan administrator, perlindungan administrator terakhir saat perubahan bersamaan, reset/password sementara wajib diganti, ganti password sendiri, verifikasi email, kode sekali pakai, pencabutan sesi dan pembatas login. Build lokal dan build deployment sebelumnya berhasil. HTTP online `/health`, `/login`, CSS dan font memberi status 200; font cocok dengan file pengguna. Pemeriksaan cloud memverifikasi 105 checksum, akses anonim yang ditolak, CORS, unggah langsung, tiket sekali pakai, dan akses gambar privat. Pemulihan lewat administrator tidak membutuhkan pengiriman email.
+43 tes integrasi lokal lulus, termasuk edit profil/role, kewenangan administrator, perlindungan administrator terakhir saat perubahan bersamaan, reset/password sementara wajib diganti, ganti password sendiri, verifikasi email, kode sekali pakai, pencabutan sesi dan pembatas login. Build lokal dan build deployment sebelumnya berhasil. HTTP online `/health`, `/login`, CSS dan font memberi status 200; font cocok dengan file pengguna. Pemeriksaan cloud memverifikasi 105 checksum, akses anonim yang ditolak, CORS, unggah langsung, tiket sekali pakai, dan akses gambar privat. Pemulihan lewat administrator tidak membutuhkan pengiriman email.
 
-Laporan teknis privat tersedia di `node-app/.private/cloud-verification.json`, `http-verification.json`, dan `integration.tap`. Snapshot privat berada di `node-app/.private/migration/local-snapshot.zip` dan tidak boleh dikirim sebagai source deployment. Kontrol Chrome belum dapat digunakan untuk verifikasi visual.
+Laporan teknis privat tersedia di `node-app/.private/cloud-verification.json`, `http-verification.json`, `data-access-migration.json`, dan laporan tes. Snapshot privat berada di `node-app/.private/migration/local-snapshot.zip` dan tidak boleh dikirim sebagai source deployment. REA berhasil memeriksa fixture lokal memakai Chrome terpisah; kontrol tab Chrome pengguna melalui CUA masih bermasalah.
