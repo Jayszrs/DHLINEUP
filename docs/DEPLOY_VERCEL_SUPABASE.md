@@ -7,7 +7,8 @@
 - Tim: `jay`, slug `jay-9d47`, ID `team_vGKzc3aPMU8IXYrZKDF2fprS`.
 - Project: `dh-fleetsync`, ID `prj_kvKFofI7aRZdo1hA9h4p7OlQA8LJ`.
 - Deployment: `dpl_BDGxTp9DBQMbFrWFUgv99soVaDRz`, READY, production alias aktif.
-- Project lokal yang ditautkan: `node-app`.
+- Repository GitHub terhubung: `Jayszrs/DHLINEUP`, branch production `main`.
+- Root Directory Vercel: `node-app`.
 - Framework Express, Node.js 22, `npm ci`, build `npm run build`, fungsi di Singapura.
 - Supabase Free dibuat lewat Marketplace dan terhubung ke development, preview, production.
 - Schema PostgreSQL privat `fleetsync`: delapan tabel. Bucket `fleetsync-private`: tidak publik.
@@ -29,19 +30,25 @@ Sertifikat diambil dari URL resmi yang tercantum pada konfigurasi dashboard Supa
 
 ## Akun aplikasi dan sumber data
 
-Akun aplikasi `jayszrs` berasal dari snapshot lokal. Gunakan password FleetSync lokalnya; akun aplikasi terpisah dari akun Google/Vercel/Supabase. Hash bcrypt lama kompatibel dengan runtime baru. Tidak ada password plaintext yang dimasukkan ke source deployment.
+Akun aplikasi `jayszrs` awalnya berasal dari snapshot lokal. Untuk memulihkan login pemilik setelah migrasi, kredensialnya sudah dikembalikan ke hash dari backup akun FleetSync online lama di InfinityFree. Gunakan password FleetSync online lama. Akun aplikasi terpisah dari akun Google/GitHub/Vercel/Supabase. Hash bcrypt lama kompatibel dengan runtime baru. Tidak ada password plaintext yang dimasukkan ke source deployment.
+
+Rekonsiliasi hanya mengubah kredensial pemilik yang masih cocok dengan snapshot awal. Kredensial sebelum rekonsiliasi dicadangkan secara privat, sesi pemilik dicabut, dan tindakan dicatat pada riwayat. Data operasional tetap berasal dari snapshot Laragon.
 
 Migrasi ini bersumber dari Laragon, bukan ekspor terbaru database InfinityFree. Website lama tetap tersedia dan tidak mengalami penghapusan akun atau data. Perubahan yang dilakukan kemudian pada salah satu database tidak tersinkron otomatis. Jika perlu migrasi tambahan, ekspor sumber terbaru dan rekonsiliasi perubahan sebelum mengubah tujuan yang sudah berisi data.
 
 ## Memperbarui aplikasi
 
-Login Vercel untuk akun tujuan disimpan terpisah di `node-app/.private/vercel` agar akun CLI default untuk project lain tetap tersedia. Gunakan scope dan konfigurasi tujuan secara eksplisit:
+Integrasi GitHub sudah terhubung melalui akun Vercel tujuan. Commit perubahan yang relevan lalu push ke `main` dari folder repository:
 
 ```powershell
-vercel deploy --prod --yes --scope jay-9d47 --cwd C:\Users\jaela\Downloads\DHLINEUP\node-app --global-config C:\Users\jaela\Downloads\DHLINEUP\node-app\.private\vercel
+git push origin main
 ```
 
-Jangan membuat ulang resource Supabase atau mengimpor snapshot setiap kali memperbarui kode. Aset publik dibangun ke `public/assets`; gambar bukti dan snapshot tetap privat. Deployment yang selesai hanya mengunggah 49 file source, tanpa file PHP, snapshot, isi database lokal, atau kredensial lokal.
+Periksa deployment baru di https://vercel.com/jay-9d47/dh-fleetsync/deployments dan tunggu status Ready. Vercel membangun aplikasi dari `node-app` dengan `npm ci` dan `npm run build`. Root Directory penting karena root repository juga berisi versi PHP lama.
+
+Login CLI untuk akun tujuan tetap disimpan terpisah di `node-app/.private/vercel`. Jika memakai CLI untuk pemeriksaan, sertakan `--scope jay-9d47` dan `--global-config C:\Users\jaela\Downloads\DHLINEUP\node-app\.private\vercel` agar tidak memakai akun CLI default untuk project lain. Perintah deploy lama dari subfolder tidak dipakai setelah Root Directory project diatur ke `node-app`.
+
+Jangan membuat ulang resource Supabase atau mengimpor snapshot setiap kali memperbarui kode. Aset publik dibangun ke `public/assets`; gambar bukti dan snapshot tetap privat. File `.private`, `.env`, `.data`, dan konfigurasi lokal tidak dimasukkan ke Git.
 
 ## Setup agent mengikuti panduan Vercel
 

@@ -2,6 +2,8 @@
 
 Versi tanpa PHP sudah diterbitkan di **https://dh-fleetsync.vercel.app/** pada 4 November 2026. Project Vercel `jay-9d47/dh-fleetsync` milik `jaelanisurya.akademicrypto@gmail.com` terhubung ke Supabase Free melalui Vercel Marketplace.
 
+Repository GitHub `Jayszrs/DHLINEUP` sudah terhubung ke project tersebut. Branch production adalah `main` dan Root Directory Vercel adalah `node-app`. Perubahan yang didorong ke branch tersebut diproses oleh integrasi GitHub Vercel.
+
 Backend memakai Node.js 22 dan Express. Frontend memakai HTML/EJS, CSS, JavaScript, dan font TT Firs Neue Bold dari pengguna. Database memakai PostgreSQL pada schema privat `fleetsync`; gambar disimpan di bucket privat `fleetsync-private`.
 
 ## Menjalankan di laptop
@@ -39,7 +41,7 @@ Impor maksimal 10 MB/5.000 baris dan gambar maksimal 5 MB. Di Vercel, browser me
 
 ## Data migrasi
 
-Snapshot **database lokal Laragon** sudah dimasukkan: 53 Line Up, 49 operator, satu akun `jayszrs`, 54 riwayat, 102 bukti, dan tiga referensi gambar. Password akun berasal dari snapshot lokal dan tetap berupa hash; bukan password akun Vercel/Supabase.
+Snapshot **database lokal Laragon** sudah dimasukkan: 53 Line Up, 49 operator, satu akun `jayszrs`, 54 riwayat, 102 bukti, dan tiga referensi gambar. Setelah migrasi, kredensial akun pemilik `jayszrs` dipulihkan dari backup akun FleetSync online lama di InfinityFree. Gunakan password FleetSync online lama; akun ini terpisah dari Google, GitHub, Vercel, dan Supabase. Password tetap disimpan sebagai hash.
 
 Website InfinityFree lama tetap terpisah. Perubahan setelah snapshot di alamat lama tidak otomatis masuk ke Supabase. Pastikan sumber data terbaru disepakati sebelum beralih penggunaan sepenuhnya.
 
