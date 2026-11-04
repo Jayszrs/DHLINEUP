@@ -97,10 +97,10 @@ Rujukan resmi: [migrasi website ke InfinityFree](https://forum.infinityfree.com/
 
 ## Pembaruan antarmuka dan akun (4 November 2026)
 
-Source lokal menambahkan tema putih/gelap, TT Firs Neue Bold dari file pengguna, hamburger desktop/ponsel, edit profil, akses impor yang lebih jelas, dan Kelola Akun. Semua pengguna memiliki akses Pengelola yang sama; tidak ada perubahan schema database.
+Pembaruan yang sudah diunggah menambahkan tema putih/gelap, TT Firs Neue Bold dari file pengguna, hamburger desktop/ponsel, edit profil, akses impor yang lebih jelas, dan Kelola Akun. Semua pengguna memiliki akses Pengelola yang sama; tidak ada perubahan schema database.
 
 Pengujian: 82 pemeriksaan integrasi PHP/MySQL pada database sementara dan sembilan pemeriksaan aktivasi/deployment. Paket `htdocs-update.zip` menyertakan font dan fitur baru, mengecualikan konfigurasi aktif, akun, data, bukti, serta kode aktivasi. Jangan impor SQL saat memperbarui tampilan ini.
 
 Pemeriksaan Impeccable menemukan satu peringatan statis pada gambar lightbox tanpa src. Elemen tersebut berada dalam dialog tertutup dan src diisi ketika bukti dibuka; bukan gambar rusak pada halaman.
 
-Status pembaruan UI: paket kode siap, belum diunggah. Pemeriksaan visual dan deployment tertahan karena kontrol Chrome gagal, sementara password hosting tidak disimpan pada template konfigurasi lokal. Data dan akun online belum diubah oleh pembaruan ini.
+Status pembaruan UI: sudah diunggah ke hosting if0_43345481 melalui FTPS pada 4 November 2026. Seluruh 45 file online cocok byte per byte dengan paket update. Konfigurasi database aktif diverifikasi tetap sama; tidak ada SQL yang diimpor, akun yang dibuat, atau bukti/data yang ditimpa. Backup 38 file kode lama tersimpan privat di dist/infinityfree/backups; laporan deployment di dist/infinityfree/deployment-ui-report.json. Koneksi FTPS sempat terputus saat verifikasi, kemudian disambungkan ulang dan seluruh checksum berhasil diperiksa. Pemeriksaan visual langsung belum tersedia karena kontrol Chrome masih gagal; akses HTTPS dari terminal juga belum berhasil, sehingga hasil runtime halaman online belum diverifikasi. Refresh website untuk memuat kode baru.

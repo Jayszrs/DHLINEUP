@@ -1,4 +1,10 @@
-# DH FleetSync: PHP + MySQL untuk Laragon 6
+# DH FleetSync
+
+**Versi JavaScript tanpa PHP sudah online di https://dh-fleetsync.vercel.app/**, menggunakan Vercel dan Supabase pada akun `jaelanisurya.akademicrypto@gmail.com`. Source aktif versi baru ada di [node-app](node-app/README.md); panduannya di [deployment Vercel + Supabase](docs/DEPLOY_VERCEL_SUPABASE.md).
+
+Data yang dimigrasikan berasal dari snapshot lokal: 53 Line Up, 49 operator, satu akun, 102 bukti dan tiga referensi. Website InfinityFree serta petunjuk Laragon di bawah dipertahankan sebagai versi sebelumnya. Kedua database tidak tersinkron otomatis.
+
+## Versi sebelumnya: PHP + MySQL untuk Laragon 6
 
 Source DH FleetSync sudah dikonversi menjadi aplikasi PHP native dengan frontend HTML/CSS dan JavaScript ringan. Data tersimpan di MySQL, termasuk perubahan dari form dan impor. Aplikasi aktif tidak memerlukan Node.js, npm, React, Composer, atau koneksi internet.
 

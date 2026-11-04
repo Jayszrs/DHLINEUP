@@ -10,3 +10,12 @@ tests/.runtime/
 legacy/react-source/node_modules/
 legacy/react-source/dist/
 *.log
+node-app/node_modules/
+node-app/.data/
+node-app/.private/
+node-app/.vercel/
+node-app/.env
+node-app/.env.*
+node-app/frontend/views.generated.js
+node-app/public/assets/
+!node-app/.env.example

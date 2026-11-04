@@ -1,0 +1,1 @@
+<% for (const [value,text] of (Array.isArray(values) ? values.map(v=>[v,v]) : Object.entries(values))) { %><option value="<%= value %>" <%= value===selected?'selected':'' %>><%= text %></option><% } %>

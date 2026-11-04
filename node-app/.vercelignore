@@ -1,0 +1,10 @@
+.private/
+.data/
+.env
+.env.*
+.vercel/
+node_modules/
+tests/
+*.log
+backend/cli/export-mysql.js
+backend/cli/import-snapshot.js
