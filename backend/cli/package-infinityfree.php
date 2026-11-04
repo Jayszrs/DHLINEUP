@@ -29,12 +29,12 @@ if (!preg_match('/^[a-f0-9]{64}$/', $activation)) {
     throw new RuntimeException('File kode aktivasi lokal tidak valid.');
 }
 $allowed = ['index.php', '.htaccess', 'backend/bootstrap.php', 'backend/helpers.php', 'backend/.htaccess', 'backend/config/app.php', 'backend/config/local.example.php', 'frontend/.htaccess', 'frontend/assets/dh-logo.png', 'storage/.htaccess', 'storage/uploads/.gitkeep', 'storage/logs/.gitkeep'];
-foreach (['backend/src', 'frontend/views', 'frontend/assets/css', 'frontend/assets/js', 'public'] as $directory) {
+foreach (['backend/src', 'frontend/views', 'frontend/assets/css', 'frontend/assets/js', 'frontend/assets/fonts', 'public'] as $directory) {
     $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(ROOT_PATH . '/' . $directory, FilesystemIterator::SKIP_DOTS));
     foreach ($iterator as $file) {
         if ($file->isFile()) {
             $relative = str_replace('\\', '/', substr($file->getPathname(), strlen(ROOT_PATH) + 1));
-            if (in_array(pathinfo($relative, PATHINFO_EXTENSION), ['php', 'css', 'js', 'ini'], true) || basename($relative) === '.htaccess') {
+            if (in_array(pathinfo($relative, PATHINFO_EXTENSION), ['php', 'css', 'js', 'ini', 'ttf'], true) || basename($relative) === '.htaccess') {
                 $allowed[] = $relative;
             }
         }

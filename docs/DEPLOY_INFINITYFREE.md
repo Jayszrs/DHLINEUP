@@ -94,3 +94,13 @@ Halaman yang masih menampilkan “Buat akun pertama” berarti akun aplikasi bel
 Ekspor database dari phpMyAdmin, serta unduh file unggahan dari `/htdocs/storage/uploads` melalui File Manager. Simpan backup konfigurasi database secara privat. Ekspor Excel hanya memuat data tabel dan tidak menggantikan backup database beserta file.
 
 Rujukan resmi: [migrasi website ke InfinityFree](https://forum.infinityfree.com/t/how-to-migrate-your-website-to-infinityfree/49315) dan [keterbatasan koneksi MySQL dari luar hosting](https://forum.infinityfree.com/t/connecting-to-mysql-from-an-external-application/49339).
+
+## Pembaruan antarmuka dan akun (4 November 2026)
+
+Source lokal menambahkan tema putih/gelap, TT Firs Neue Bold dari file pengguna, hamburger desktop/ponsel, edit profil, akses impor yang lebih jelas, dan Kelola Akun. Semua pengguna memiliki akses Pengelola yang sama; tidak ada perubahan schema database.
+
+Pengujian: 82 pemeriksaan integrasi PHP/MySQL pada database sementara dan sembilan pemeriksaan aktivasi/deployment. Paket `htdocs-update.zip` menyertakan font dan fitur baru, mengecualikan konfigurasi aktif, akun, data, bukti, serta kode aktivasi. Jangan impor SQL saat memperbarui tampilan ini.
+
+Pemeriksaan Impeccable menemukan satu peringatan statis pada gambar lightbox tanpa src. Elemen tersebut berada dalam dialog tertutup dan src diisi ketika bukti dibuka; bukan gambar rusak pada halaman.
+
+Status pembaruan UI: paket kode siap, belum diunggah. Pemeriksaan visual dan deployment tertahan karena kontrol Chrome gagal, sementara password hosting tidak disimpan pada template konfigurasi lokal. Data dan akun online belum diubah oleh pembaruan ini.

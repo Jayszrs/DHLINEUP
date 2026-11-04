@@ -6,7 +6,7 @@ final class Files
 {
     public static function asset(string $name): never
     {
-        if (!preg_match('~^(dh-logo\.png|css/(source|app)\.css|js/app\.js|evidence/[A-Za-z0-9_]+\.png|reference/[A-Za-z0-9_]+\.png)$~', $name)) {
+        if (!preg_match('~^(dh-logo\.png|css/(source|app)\.css|js/(app|theme)\.js|fonts/tt-firs-neue-bold\.ttf|evidence/[A-Za-z0-9_]+\.png|reference/[A-Za-z0-9_]+\.png)$~', $name)) {
             throw new HttpException(404, 'Aset tidak ditemukan.');
         }
         $path = ROOT_PATH . '/frontend/assets/' . $name;
@@ -14,7 +14,7 @@ final class Files
             throw new HttpException(404, 'Aset tidak ditemukan.');
         }
         $ext = pathinfo($path, PATHINFO_EXTENSION);
-        self::send($path, ['css' => 'text/css; charset=UTF-8', 'js' => 'text/javascript; charset=UTF-8', 'png' => 'image/png'][$ext]);
+        self::send($path, ['css' => 'text/css; charset=UTF-8', 'js' => 'text/javascript; charset=UTF-8', 'png' => 'image/png', 'ttf' => 'font/ttf'][$ext]);
     }
 
     public static function media(string $id): never

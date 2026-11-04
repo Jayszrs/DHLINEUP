@@ -4,7 +4,7 @@ require dirname(__DIR__) . '/backend/bootstrap.php';
 
 try {
     $assetPath = Fleet\Validation::text($_GET, 'asset', 180);
-    if ($assetPath !== '' && (str_starts_with($assetPath, 'css/') || str_starts_with($assetPath, 'js/') || $assetPath === 'dh-logo.png')) {
+    if ($assetPath !== '' && (str_starts_with($assetPath, 'css/') || str_starts_with($assetPath, 'js/') || str_starts_with($assetPath, 'fonts/') || $assetPath === 'dh-logo.png')) {
         Fleet\Files::asset($assetPath);
     }
     try {

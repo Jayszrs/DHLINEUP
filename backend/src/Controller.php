@@ -79,6 +79,12 @@ final class Controller
             case 'dokumentasi':
                 $this->view('dokumentasi', ['rows' => $this->repo->lineups($filters), 'filters' => $filters]);
                 break;
+            case 'profile':
+                $this->view('profile', ['values' => $this->user]);
+                break;
+            case 'accounts':
+                $this->view('accounts', ['accounts' => (new Accounts($this->db, (int) $this->user['id']))->all(), 'values' => []]);
+                break;
             case 'import':
                 $this->view('import');
                 break;
@@ -90,6 +96,8 @@ final class Controller
                 break;
             case 'media':
                 Files::media(Validation::text($_GET, 'id', 100, true));
+            case 'profile-save':
+            case 'account-create':
             case 'logout':
             case 'lineup-save':
             case 'lineup-delete':
@@ -140,6 +148,20 @@ final class Controller
 
     private function mutate(string $page): void
     {
+        if (in_array($page, ['profile-save', 'account-create'], true)) {
+            $accounts = new Accounts($this->db, (int) $this->user['id']);
+            $target = $page === 'profile-save' ? 'profile' : 'accounts';
+            try {
+                $page === 'profile-save' ? $accounts->saveProfile($_POST) : $accounts->create($_POST);
+                flash($page === 'profile-save' ? 'Profil berhasil diperbarui.' : 'Akun baru berhasil dibuat dengan akses Pengelola.');
+                redirect($target);
+            } catch (HttpException $error) {
+                http_response_code($error->status);
+                $values = array_filter(array_intersect_key($_POST, array_flip(['name', 'username'])), 'is_string');
+                $this->view($target, ['errorMessage' => $error->getMessage(), 'values' => $values, 'accounts' => $accounts->all()]);
+            }
+            return;
+        }
         if ($page === 'logout') {
             $this->repo->audit('logout', 'user', (string) $this->user['id']);
             $this->auth->logout();

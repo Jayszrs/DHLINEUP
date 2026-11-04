@@ -223,6 +223,38 @@ try:
     check(client2.request('lineup-delete', dict(csrf=token2, id='src-7', version=1))[0] == 200, 'source row can be explicitly deleted in isolated test database')
     after_delete = stats()['lineups']
     check('0 data awal' in php('backend/cli/install.php') and stats()['lineups'] == after_delete and client2.request('detail', id='src-7')[0] == 404, 'reinstall does not restore deleted source or reset edits')
+    check(client2.request('profile')[0] == 200 and client2.request('accounts')[0] == 200, 'authenticated profile and account pages render')
+    check(client2.request('profile-save')[0] == 405 and client2.request('account-create')[0] == 405, 'account mutations require POST')
+    check(client2.request('profile-save', dict(csrf='invalid', name='No', username='nope'))[0] == 419, 'profile requires CSRF')
+    check(client2.request('profile-save', dict(csrf=token2, id=9999, name='Updated Name', username='integration'))[0] == 200, 'profile updates session account and ignores posted ID')
+    check(b'Updated Name' in client2.request('profile')[1], 'updated name appears in profile and header')
+    new_account = dict(csrf=token2, name='Second Operator', username='second.operator', password='Second-Password-123', password_confirmation='Second-Password-123', current_password='wrong')
+    check(client2.request('account-create', new_account)[0] == 422 and stats()['users'] == 1, 'creating account requires current password')
+    new_account['current_password'] = account['password']
+    new_account['password_confirmation'] = 'mismatch'
+    check(client2.request('account-create', new_account)[0] == 422 and stats()['users'] == 1, 'account password confirmation enforced')
+    new_account['password_confirmation'] = new_account['password']
+    check(client2.request('account-create', new_account)[0] == 200 and stats()['users'] == 2, 'new account created without replacing current session')
+    check(b'Updated Name' in client2.request('profile')[1], 'creator remains logged into own account')
+    check(client2.request('account-create', new_account)[0] == 409 and stats()['users'] == 2, 'duplicate username fails atomically')
+    check(client2.request('profile-save', dict(csrf=token2, name='Conflicting', username='second.operator'))[0] == 409, 'profile cannot take another username')
+    check(b'Updated Name' in client2.request('profile')[1], 'conflicting profile change is rolled back')
+    colleague = Client(base)
+    colleague_token = colleague.token('login')
+    check(colleague.request('login', dict(csrf=colleague_token, username='second.operator', password=new_account['password']))[0] == 200, 'new account can login')
+    colleague_token = colleague.token()
+    check(colleague.request('lineup-form')[0] == 200 and colleague.request('accounts')[0] == 200, 'new account receives same operational and account permissions')
+    third = dict(new_account, csrf=colleague_token, name='Third Operator', username='third.operator', current_password=new_account['password'])
+    check(colleague.request('account-create', third)[0] == 200 and stats()['users'] == 3, 'new account can create another equal-role account')
+    audit = colleague.request('audit')[1]
+    check(b'account_create' in audit and b'profile_update' in audit and new_account['password'].encode() not in audit, 'audit records account changes without passwords')
+    font_status, font, _, font_headers = client2.request(asset='fonts/tt-firs-neue-bold.ttf')
+    check(font_status == 200 and font_headers['Content-Type'] == 'font/ttf' and font == (ROOT / 'frontend/assets/fonts/tt-firs-neue-bold.ttf').read_bytes(), 'supplied font is served intact with correct MIME')
+    check(client2.request(asset='js/theme.js')[0] == 200, 'theme initialization asset is served')
+    check('page=login' in Client(base).request('accounts')[2], 'account list requires authentication')
+    denied_account = dict(new_account, username='blocked.operator', current_password='wrong-password')
+    denied_statuses = [client2.request('account-create', denied_account)[0] for _ in range(6)]
+    check(denied_statuses == [422, 422, 422, 422, 422, 429] and stats()['users'] == 3, 'account creation verification throttles after five failures')
     locked_client = Client(base)
     lock_token = locked_client.token('login')
     attempts = [locked_client.request('login', dict(csrf=lock_token, username='integration', password='wrong-password'))[0] for _ in range(6)]

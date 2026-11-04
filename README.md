@@ -6,13 +6,22 @@ Sudah diuji menggunakan **PHP 8.1.10, MySQL 8.0.30, dan Apache 2.4.54** yang ter
 
 Versi online di **https://ptdh.xo.je/** sudah memuat 53 Line Up, 49 operator, 102 gambar bukti, tiga gambar referensi, dan riwayat lokal. Akun online tetap dipertahankan. Detail hosting, migrasi data, paket update, dan backup ada di [panduan InfinityFree](docs/DEPLOY_INFINITYFREE.md). Perubahan selanjutnya di Laragon dan hosting tetap terpisah sampai dimigrasikan lagi.
 
+## Tampilan dan akun
+
+- Tema putih menjadi tampilan awal. Tombol bulan/matahari di header mengganti mode terang/gelap; pilihan tersimpan pada perangkat.
+- Hamburger membuka/menutup sidebar di desktop dan ponsel.
+- Klik nama/inisial di kanan atas untuk **Edit profil** atau **Kelola akun**. Profil mengubah nama dan username akun yang sedang masuk.
+- **Kelola akun** membuat akun dengan akses **Pengelola** yang sama. Konfirmasi memakai password akun pembuat; password akun baru minimal 10 karakter.
+- **Impor Excel** tersedia di header, sidebar, dan toolbar Line Up. Gunakan template XLSX/CSV pada halaman impor.
+- Font TT Firs Neue Bold yang disediakan pengguna dipakai pada judul dan tombol. Teks isi memakai regular agar tabel tetap nyaman dibaca.
+
 ## Buka di laptop ini
 
 1. Buka **Laragon 6**, pilih **Start All** agar Apache dan MySQL berjalan.
 2. Buka [http://localhost/dhlineup/](http://localhost/dhlineup/).
 3. Buat akun pengelola pada halaman pertama. Pilih username sendiri dan password minimal 10 karakter. Setelah setup, halaman ini otomatis ditutup dan pengguna harus login.
 
-Database `dh_fleetsync` beserta **53 Line Up, 49 Master Operator, dan 102 gambar bukti** sudah disiapkan. Akun utama belum dibuat agar username dan password ditentukan sendiri.
+Database `dh_fleetsync` beserta **53 Line Up, 49 Master Operator, dan 102 gambar bukti** sudah disiapkan. Jika database belum memiliki akun, halaman setup meminta username dan password pertama. Akun yang sudah dibuat tetap dipertahankan.
 
 Folder `C:\laragon\www\dhlineup` merupakan **junction** menuju folder project ini. Mengedit source di Downloads langsung memperbarui aplikasi Laragon. Jangan menghapus file melalui junction karena file aslinya juga akan terhapus.
 
@@ -46,9 +55,11 @@ DHLINEUP/
       layout.php                 Sidebar dan kerangka halaman
       pages/                     Halaman, form, dan tabel PHP/HTML
     assets/
-      css/source.css             Tema dari source asli
-      css/app.css                Penyesuaian form dan responsivitas
-      js/app.js                  Menu mobile, lightbox, konfirmasi, loading
+      css/source.css             Arsip tema source asli (tidak dimuat)
+      css/app.css                Tema putih/gelap dan tata letak responsif
+      js/app.js                  Hamburger, tema, menu akun, lightbox
+      js/theme.js                Preferensi tema sebelum halaman tampil
+      fonts/                     TT Firs Neue Bold dari file pengguna
       dh-logo.png
       evidence/                  102 bukti asli
       reference/                 3 gambar referensi
@@ -97,7 +108,7 @@ Installer membutuhkan ekstensi PHP `pdo_mysql`, `mbstring`, `fileinfo`, `zip`, d
 
 ## Fitur
 
-- Login berbasis sesi, password hash, setup akun pertama hanya dari localhost, dan pembatasan percobaan login.
+- Login berbasis sesi, password hash, setup akun pertama dari localhost atau kode aktivasi hosting, dan pembatasan percobaan login.
 - Dashboard per district: total Line Up, Mine, FTW, Daily/WTD/MTD/YTD, tren delapan hari, dan prioritas pengecekan. Acuan periode memakai tanggal data terakhir pada district terpilih.
 - Line Up: filter district/tanggal/shift/type, pencarian, detail, tambah, edit, dan hapus.
 - Master Operator: pencarian, tambah, edit, hapus, serta ekspor Excel. Operator yang memiliki riwayat Line Up tidak dapat dihapus.
@@ -124,7 +135,7 @@ Master Operator mengikuti penugasan terbaru saat Line Up disimpan. Edit master t
 
 Data awal hanya berasal dari **BCP**. District lain kosong sampai ditambahkan. Shift dan klasifikasi Production/Support tidak ada pada source awal sehingga tidak ditebak. Mine Dispatch dan FTW diperiksa terpisah; screenshot tidak otomatis mengubah status menjadi Ya.
 
-Aplikasi menyimpan data pada MySQL lokal. Tidak ada koneksi ke API Mine Dispatch, SSO, spreadsheet perusahaan, atau data browser React yang pernah diedit secara terpisah. Akun pertama memiliki akses ke semua fitur; manajemen role dan akun tambahan belum menjadi bagian aplikasi ini.
+Aplikasi menyimpan data pada MySQL lokal. Tidak ada koneksi ke API Mine Dispatch, SSO, spreadsheet perusahaan, atau data browser React yang pernah diedit secara terpisah. Semua akun memiliki akses Pengelola yang sama. Kelola Akun dapat membuat akun tambahan; pembatasan per role belum diterapkan.
 
 ## Pengujian
 
