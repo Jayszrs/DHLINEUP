@@ -6,7 +6,7 @@
 - Akun Vercel: `jaelanisurya.akademicrypto@gmail.com`.
 - Tim: `jay`, slug `jay-9d47`, ID `team_vGKzc3aPMU8IXYrZKDF2fprS`.
 - Project: `dh-fleetsync`, ID `prj_kvKFofI7aRZdo1hA9h4p7OlQA8LJ`.
-- Deployment: `dpl_BDGxTp9DBQMbFrWFUgv99soVaDRz`, READY, production alias aktif.
+- Deployment fitur email pemulihan: `dpl_GXXb7aDHp8CoCF9ktw5C3YWc664y`, commit `aa41ace`, READY dari GitHub, production alias aktif. SMTP masih menunggu kredensial pengirim.
 - Repository GitHub terhubung: `Jayszrs/DHLINEUP`, branch production `main`.
 - Root Directory Vercel: `node-app`.
 - Framework Express, Node.js 22, `npm ci`, build `npm run build`, fungsi di Singapura.

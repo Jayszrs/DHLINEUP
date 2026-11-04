@@ -2,7 +2,7 @@
 
 **Versi JavaScript tanpa PHP sudah online di https://dh-fleetsync.vercel.app/**, menggunakan Vercel dan Supabase pada akun `jaelanisurya.akademicrypto@gmail.com`. Source aktif versi baru ada di [node-app](node-app/README.md); panduannya di [deployment Vercel + Supabase](docs/DEPLOY_VERCEL_SUPABASE.md).
 
-Data yang dimigrasikan berasal dari snapshot lokal: 53 Line Up, 49 operator, satu akun, 102 bukti dan tiga referensi. Website InfinityFree serta petunjuk Laragon di bawah dipertahankan sebagai versi sebelumnya. Kedua database tidak tersinkron otomatis.
+Data yang dimigrasikan berasal dari snapshot lokal: 53 Line Up, 49 operator, satu akun, 102 bukti dan tiga referensi. Website InfinityFree dipensiunkan atas permintaan pengguna pada 4 November 2026. Source PHP dan petunjuk Laragon di bawah dipertahankan sebagai arsip versi sebelumnya. Database lama tidak tersinkron otomatis ke Supabase.
 
 ## Versi sebelumnya: PHP + MySQL untuk Laragon 6
 
@@ -10,7 +10,7 @@ Source DH FleetSync sudah dikonversi menjadi aplikasi PHP native dengan frontend
 
 Sudah diuji menggunakan **PHP 8.1.10, MySQL 8.0.30, dan Apache 2.4.54** yang terpasang di `C:\laragon` pada laptop ini.
 
-Versi online di **https://ptdh.xo.je/** sudah memuat 53 Line Up, 49 operator, 102 gambar bukti, tiga gambar referensi, dan riwayat lokal. Akun online tetap dipertahankan. Detail hosting, migrasi data, paket update, dan backup ada di [panduan InfinityFree](docs/DEPLOY_INFINITYFREE.md). Perubahan selanjutnya di Laragon dan hosting tetap terpisah sampai dimigrasikan lagi.
+Versi InfinityFree lama di `ptdh.xo.je` sudah dipensiunkan. File website dihapus setelah backup privat terakhir diverifikasi; akun hosting dan database MySQL lama tidak ditutup atau dihapus. Riwayat hosting, migrasi data, dan backup ada di [panduan InfinityFree](docs/DEPLOY_INFINITYFREE.md). Gunakan alamat Vercel untuk aplikasi aktif.
 
 ## Tampilan dan akun
 

@@ -1,5 +1,13 @@
 # Deployment InfinityFree
 
+## Dipensiunkan pada 4 November 2026
+
+Atas permintaan pengguna, file website lama di `/htdocs` akun `if0_43345481` dihapus setelah seluruh 153 file dibackup dan checksum arsip diverifikasi. Aplikasi aktif sekarang **https://dh-fleetsync.vercel.app/** dengan Supabase. Akun hosting dan database MySQL lama tidak ditutup atau dihapus.
+
+Backup terakhir tersimpan secara privat di `dist/infinityfree/backups/site-before-removal-20261104T045324Z.zip`. Arsip berisi konfigurasi sensitif dan gambar, sehingga tidak boleh dipublikasikan atau dimasukkan ke Git. Laporan penghapusan tersedia di `dist/infinityfree/retirement-report.json`.
+
+Bagian di bawah adalah riwayat deployment sebelumnya, bukan petunjuk untuk aplikasi yang sekarang aktif.
+
 Website: **https://ptdh.xo.je/**
 
 - Akun InfinityFree: `jaelanisuryasaputra@gmail.com`
