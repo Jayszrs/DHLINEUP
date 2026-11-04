@@ -1218,6 +1218,13 @@ small {
 .recovery-verification {
   margin-top:20px
 }
+.recovery-steps {
+  padding-inline-start:24px;
+  margin-block:24px
+}
+.recovery-steps li+li {
+  margin-top:14px
+}
 .auth-form input {
   font-size:16px
 }

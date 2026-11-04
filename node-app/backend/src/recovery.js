@@ -86,7 +86,7 @@ export class Recovery {
       await tx.query('SELECT id FROM fleetsync.users WHERE id=$1 FOR UPDATE', [owner.id]);
       const current = await one(tx, "UPDATE fleetsync.email_recovery SET reset_hash=NULL,reset_expires_at=NULL,pending_email=NULL,verify_hash=NULL,verify_expires_at=NULL WHERE user_id=$1 AND reset_hash=$2 AND reset_expires_at>now() AND email=$3 RETURNING user_id", [owner.id, hash, email]);
       if (!current) throw invalid();
-      await tx.query('UPDATE fleetsync.users SET password_hash=$1 WHERE id=$2', [passwordHash, owner.id]);
+      await tx.query('UPDATE fleetsync.users SET password_hash=$1,must_change_password=false WHERE id=$2', [passwordHash, owner.id]);
       await tx.query('DELETE FROM fleetsync.sessions WHERE user_id=$1', [owner.id]);
       await tx.query('DELETE FROM fleetsync.upload_tickets WHERE user_id=$1', [owner.id]);
       await tx.query('DELETE FROM fleetsync.login_attempts WHERE attempt_key=ANY($1::text[])', [[key, this.auth.attemptKey(req, 'login', username)]]);

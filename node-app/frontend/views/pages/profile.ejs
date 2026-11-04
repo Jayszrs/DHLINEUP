@@ -1,7 +1,22 @@
-<section class="editor-page"><div class="page-title"><div><h2>Profil saya</h2><p>Perbarui nama yang tampil dan username untuk masuk.</p></div><span class="chip muted"><%= ROLE %></span></div>
+<% if(user.must_change_password) { %><div class="alert" role="status">Anda masuk menggunakan password sementara dari administrator. Ganti password terlebih dahulu untuk melanjutkan pekerjaan.</div><% } %>
+<% if(!user.must_change_password) { %>
+<section class="editor-page"><div class="page-title"><div><h2>Edit profil</h2><p>Perbarui nama yang tampil dan username untuk masuk.</p></div><span class="chip muted"><%= user.is_admin?'Administrator':ROLE %></span></div>
 <form class="editor-form" method="post" action="<%= url('profile-save') %>" data-saving><input type="hidden" name="csrf" value="<%= csrf %>"><div class="form-grid">
 <label>Nama lengkap<input name="name" autocomplete="name" required maxlength="120" value="<%= values.name || '' %>"></label><label>Username<input name="username" autocomplete="username" required minlength="3" maxlength="80" pattern="[a-zA-Z0-9_.\-]{3,80}" value="<%= values.username || '' %>"><small>Huruf, angka, titik, garis bawah, atau tanda hubung.</small></label></div>
 <div class="modal-actions"><a class="subtle-button" href="<%= url('lineup') %>">Kembali</a><button class="btn primary" type="submit">Simpan profil</button></div></form></section>
+<% } %>
+<section class="editor-page recovery-settings" aria-labelledby="password-title">
+  <div class="page-title"><div><h2 id="password-title">Ganti password</h2><p>Setelah password diganti, semua perangkat keluar dan Anda perlu masuk kembali.</p></div></div>
+  <form class="editor-form" method="post" action="<%= url('password-change') %>" data-saving>
+    <input type="hidden" name="csrf" value="<%= csrf %>"><input type="hidden" name="username" autocomplete="username" value="<%= user.username %>">
+    <div class="form-grid">
+      <label class="full-span">Password saat ini<input name="current_password" type="password" required maxlength="128" autocomplete="current-password"><small><%= user.must_change_password?'Masukkan password sementara yang diberikan administrator.':'Konfirmasi password yang sedang Anda gunakan.' %></small></label>
+      <label>Password baru<input name="password" type="password" required minlength="10" maxlength="72" autocomplete="new-password"><small>Minimal 10 karakter dan berbeda dari password saat ini.</small></label>
+      <label>Ulangi password baru<input name="password_confirmation" type="password" required minlength="10" maxlength="72" autocomplete="new-password"></label>
+    </div><div class="modal-actions"><button class="btn primary" type="submit">Simpan password baru</button></div>
+  </form>
+</section>
+<% if(!user.must_change_password&&mailReady) { %>
 <section class="editor-page recovery-settings" aria-labelledby="recovery-title">
   <div class="page-title"><div><h2 id="recovery-title">Email pemulihan</h2><p>Verifikasi email untuk menerima kode saat Anda lupa password.</p></div></div>
   <form class="editor-form" method="post" action="<%= url('recovery-email-save') %>">
@@ -20,3 +35,6 @@
   </form>
   <% } %>
 </section>
+<% } else if(!user.must_change_password) { %>
+<section class="editor-page recovery-settings" aria-labelledby="recovery-title"><h2 id="recovery-title">Bantuan saat lupa password</h2><p>Untuk sementara, hubungi administrator FleetSync untuk verifikasi identitas dan reset password.</p><% if(user.is_admin) { %><a class="auth-link" href="<%= url('accounts') %>">Reset password pengguna di Kelola Akun</a><% } %></section>
+<% } %>

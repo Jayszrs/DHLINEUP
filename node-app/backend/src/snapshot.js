@@ -49,6 +49,7 @@ export async function importSnapshot(db,storage,buffer) {
         const values=columns.map(key=>normalizeValue(key,row[key]??null));
         await tx.query(`INSERT INTO fleetsync.${table}(${columns.join(',')}) VALUES(${columns.map((_,i)=>`$${i+1}`).join(',')}) ${table==='app_settings'?'ON CONFLICT DO NOTHING':''}`,values);
       }
+      await tx.query('UPDATE fleetsync.users SET is_admin=true WHERE id=(SELECT min(id) FROM fleetsync.users) AND NOT EXISTS (SELECT 1 FROM fleetsync.users WHERE is_admin)');
       for(const table of ['users','operators','audit_logs']) await tx.query(`SELECT setval(pg_get_serial_sequence('fleetsync.${table}','id'),coalesce((SELECT max(id) FROM fleetsync.${table}),1),(SELECT count(*)>0 FROM fleetsync.${table}))`);
       await tx.query("INSERT INTO fleetsync.app_settings(setting_key,setting_value) VALUES('migration_snapshot',$1)",[marker]);
       return {skipped:false,counts:Object.fromEntries(Object.entries(data.tables).map(([key,rows])=>[key,rows.length])),images:data.images.length};

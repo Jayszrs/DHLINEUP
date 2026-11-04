@@ -13,6 +13,11 @@ CREATE TABLE IF NOT EXISTS fleetsync.users (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS users_username ON fleetsync.users (lower(username));
+ALTER TABLE fleetsync.users ADD COLUMN IF NOT EXISTS is_admin boolean NOT NULL DEFAULT false;
+ALTER TABLE fleetsync.users ADD COLUMN IF NOT EXISTS must_change_password boolean NOT NULL DEFAULT false;
+UPDATE fleetsync.users SET is_admin=true
+WHERE id=(SELECT min(id) FROM fleetsync.users)
+  AND NOT EXISTS (SELECT 1 FROM fleetsync.users WHERE is_admin);
 CREATE TABLE IF NOT EXISTS fleetsync.email_recovery (
   user_id bigint PRIMARY KEY REFERENCES fleetsync.users(id) ON DELETE CASCADE,
   email varchar(254),

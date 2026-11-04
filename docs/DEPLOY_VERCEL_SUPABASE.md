@@ -6,7 +6,7 @@
 - Akun Vercel: `jaelanisurya.akademicrypto@gmail.com`.
 - Tim: `jay`, slug `jay-9d47`, ID `team_vGKzc3aPMU8IXYrZKDF2fprS`.
 - Project: `dh-fleetsync`, ID `prj_kvKFofI7aRZdo1hA9h4p7OlQA8LJ`.
-- Deployment fitur email pemulihan: `dpl_GXXb7aDHp8CoCF9ktw5C3YWc664y`, commit `aa41ace`, READY dari GitHub, production alias aktif. SMTP masih menunggu kredensial pengirim.
+- Production dibangun otomatis dari GitHub. Menu Lupa password memakai bantuan administrator; SMTP tidak diaktifkan.
 - Repository GitHub terhubung: `Jayszrs/DHLINEUP`, branch production `main`.
 - Root Directory Vercel: `node-app`.
 - Framework Express, Node.js 22, `npm ci`, build `npm run build`, fungsi di Singapura.
@@ -36,13 +36,17 @@ Rekonsiliasi hanya mengubah kredensial pemilik yang masih cocok dengan snapshot 
 
 Migrasi ini bersumber dari Laragon, bukan ekspor terbaru database InfinityFree. Website lama dipensiunkan atas permintaan pengguna pada 4 November 2026, setelah backup file terakhir diverifikasi. Database lama tidak tersinkron otomatis ke Supabase.
 
-## Email pemulihan dan pembatasan login
+## Pemulihan akun dan pembatasan login
 
 Setelah lima kegagalan, login memberi jeda maksimal 30 detik per kombinasi username dan koneksi, dengan hitung mundur dan `Retry-After`. Pembatas lama selama 15 menit tidak lagi dipakai. Login dan pemulihan menggunakan pembatas terpisah.
 
-Daftarkan email melalui Profil dengan password saat ini, lalu verifikasi kode yang dikirim ke email tersebut. Menu Lupa password hanya mengirim kode ke email terverifikasi yang sesuai dengan username. Kode reset berlaku 10 menit, sekali pakai, disimpan sebagai hash, dan reset mencabut semua sesi akun. Permintaan pengiriman dibatasi satu kali per menit.
+Sesuai pilihan pengguna, pemulihan sementara dilakukan melalui administrator. Akun pemilik pertama `jayszrs` memiliki `is_admin=true`; akun baru tetap Pengelola. Administrator membuka Kelola Akun, memilih Reset password, memverifikasi identitas pengguna secara terpisah, dan mengonfirmasi password administrator sendiri sebelum menetapkan password sementara. Reset mencabut sesi/tiket unggahan dan kode pemulihan yang masih aktif pada akun target, serta mencatat tindakan tanpa password di audit.
 
-SMTP perlu diaktifkan terpisah dari domain website. Website tetap memakai `dh-fleetsync.vercel.app`; Gmail bisa menjadi pengirim melalui `smtp.gmail.com:465` dengan App Password khusus dan Verifikasi 2 Langkah. Isi `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` sebagai environment server yang dienkripsi, lalu redeploy. Jangan masukkan App Password ke Git atau chat. Selama kredensial SMTP belum tersedia, pengiriman belum aktif dan UI menyatakan status itu.
+Flag `must_change_password` mengarahkan pengguna yang baru direset ke Profil, dan membatasi akses sampai password sementara diganti. Ganti password sendiri membutuhkan password saat ini dan konfirmasi password baru, mencabut seluruh sesi, lalu meminta login kembali. Edit profil mengubah nama/username akun sendiri dan tidak menerima perubahan hak administrator dari formulir.
+
+Migrasi schema menambah kolom `is_admin` dan `must_change_password` dengan default false; pemilik pertama menjadi administrator jika belum ada administrator. Jalankan CLI `backend/cli/init-db.js` dengan environment database tujuan sebelum deployment kode yang memakai kolom tersebut. Data operasional dan hash password yang sudah ada tidak diubah oleh migrasi schema.
+
+Implementasi email disimpan untuk penggunaan mendatang, tetapi SMTP saat ini tidak aktif dan tidak diperlukan untuk pemulihan lewat administrator. Website tetap memakai `dh-fleetsync.vercel.app`.
 
 ## Memperbarui aplikasi
 
@@ -71,6 +75,6 @@ Panduan yang dibaca: https://vercel.com/get-started.md.
 
 ## Pemeriksaan
 
-25 tes integrasi lokal lulus, termasuk verifikasi email, kode reset kedaluwarsa/sekali pakai, pencabutan sesi dan pembatas login baru. Build lokal dan build deployment sebelumnya berhasil. HTTP online `/health`, `/login`, CSS dan font memberi status 200; font cocok dengan file pengguna. Pemeriksaan cloud memverifikasi 105 checksum, akses anonim yang ditolak, CORS, unggah langsung, tiket sekali pakai, dan akses gambar privat. Pengiriman email ke inbox nyata perlu diverifikasi setelah kredensial SMTP tersedia.
+31 tes integrasi lokal lulus, termasuk kewenangan administrator, reset/password sementara wajib diganti, ganti password sendiri, edit profil, verifikasi email, kode sekali pakai, pencabutan sesi dan pembatas login. Build lokal dan build deployment sebelumnya berhasil. HTTP online `/health`, `/login`, CSS dan font memberi status 200; font cocok dengan file pengguna. Pemeriksaan cloud memverifikasi 105 checksum, akses anonim yang ditolak, CORS, unggah langsung, tiket sekali pakai, dan akses gambar privat. Pemulihan lewat administrator tidak membutuhkan pengiriman email.
 
 Laporan teknis privat tersedia di `node-app/.private/cloud-verification.json`, `http-verification.json`, dan `integration.tap`. Snapshot privat berada di `node-app/.private/migration/local-snapshot.zip` dan tidak boleh dikirim sebagai source deployment. Kontrol Chrome belum dapat digunakan untuk verifikasi visual.

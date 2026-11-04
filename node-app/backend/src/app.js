@@ -14,9 +14,9 @@ import * as validation from './validation.js';
 import { HEADERS,readSpreadsheet,exportRows,xlsx,csv } from './spreadsheet.js';
 
 const ROOT=fileURLToPath(new URL('../../',import.meta.url));
-const pages=['lineup','dashboard','detail','lineup-form','master','operator-form','dokumentasi','import','audit','profile','accounts'];
+const pages=['lineup','dashboard','detail','lineup-form','master','operator-form','dokumentasi','import','audit','profile','accounts','account-reset'];
 const actions=['lineup-save','lineup-delete','operator-save','operator-delete','profile-save','account-create','logout','import'];
-const titles={'lineup':'DH Line Up',dashboard:'Dashboard',detail:'Detail Unit','lineup-form':'Form Line Up',master:'Master Operator','operator-form':'Form Operator',dokumentasi:'Dokumentasi',import:'Impor Data',audit:'Riwayat Perubahan',profile:'Profil Saya',accounts:'Kelola Akun',login:'Login',setup:'Buat Akun Pertama','forgot-password':'Lupa Password','reset-password':'Password Baru',error:'Kesalahan'};
+const titles={'lineup':'DH Line Up',dashboard:'Dashboard',detail:'Detail Unit','lineup-form':'Form Line Up',master:'Master Operator','operator-form':'Form Operator',dokumentasi:'Dokumentasi',import:'Impor Data',audit:'Riwayat Perubahan',profile:'Profil Saya',accounts:'Kelola Akun','account-reset':'Reset Password Akun',login:'Login',setup:'Buat Akun Pertama','forgot-password':'Lupa Password','reset-password':'Password Baru',error:'Kesalahan'};
 const url=(page='lineup',params={})=>'/'+page+(Object.keys(params).length?'?'+new URLSearchParams(Object.entries(params).filter(([,v])=>v!==undefined&&v!==null)).toString():'');
 const asset=name=>'/assets/'+name;
 const dateId=(value,short=false)=>value?new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:short?'short':'long',...(short?{}:{year:'numeric'}),timeZone:'Asia/Jakarta'}).format(new Date(String(value).slice(0,10)+'T00:00:00Z')):'-';
@@ -54,10 +54,15 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
     else if(page==='setup') return res.redirect(303,url(req.user?'lineup':'login'));
     if(!req.user&&!['login','setup','forgot-password','reset-password'].includes(page)) { if(req.path==='/upload-ticket') return res.status(401).json({error:'Silakan masuk kembali.'});return res.redirect(303,url('login')); }
     if(req.user&&['login','forgot-password','reset-password'].includes(page)) return res.redirect(303,url('lineup'));
+    if(req.user?.must_change_password&&!['profile','password-change','logout'].includes(page)) {
+      if(page==='upload-ticket') return res.status(403).json({error:'Ganti password sementara di Profil sebelum melanjutkan.'});
+      return res.redirect(303,url('profile'));
+    }
     req.repo=new Repository(req.db,req.user?.id);next();
   });
   for(const page of ['setup','login','forgot-password','reset-password']) app.all('/'+page,async(req,res)=>{
     if(!['GET','POST','HEAD'].includes(req.method)) throw new validation.HttpError(405,'Metode tidak didukung.');
+    if(page==='reset-password'&&!req.mail.ready) return res.redirect(303,url('forgot-password'));
     let errorMessage='',retryAfter=0;
     if(req.method==='POST') {
       req.auth.csrf(req);
@@ -74,6 +79,33 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
       catch(error) { if(!error.status&&error.code!=='23505') throw error;res.status(error.status||409);retryAfter=error.retryAfter||0;if(retryAfter) res.set('Retry-After',String(retryAfter));errorMessage=error.code==='23505'?'Username sudah digunakan.':error.message; }
     }
     return view(req,res,page,{errorMessage,retryAfter,values:{name:typeof req.body?.name==='string'?req.body.name:'',username:typeof req.body?.username==='string'?req.body.username:'',email:typeof req.body?.email==='string'?req.body.email:''}});
+  });
+  app.post('/password-change',async(req,res)=>{
+    req.auth.csrf(req);
+    try {
+      await req.auth.changePassword(req,res);
+      await req.auth.flash(req,'Password berhasil diganti. Semua sesi lama sudah keluar. Masuk kembali dengan password baru.');
+      return res.redirect(303,url('login'));
+    } catch(error) {
+      if(!error.status) throw error;
+      res.status(error.status);if(error.retryAfter) res.set('Retry-After',String(error.retryAfter));
+      return view(req,res,'profile',{values:req.user,errorMessage:error.message,recoverySettings:await req.recovery.settings(req.user.id)});
+    }
+  });
+  app.post('/account-password-reset',async(req,res)=>{
+    if(!req.user.is_admin) throw new validation.HttpError(403,'Hanya administrator yang dapat mereset password akun lain.');
+    req.auth.csrf(req);
+    try {
+      const username=await req.auth.resetAccountPassword(req);
+      await req.auth.flash(req,`Password sementara untuk @${username} sudah disimpan. Sampaikan secara pribadi; pengguna wajib menggantinya setelah masuk.`);
+      return res.redirect(303,url('accounts'));
+    } catch(error) {
+      if(!error.status) throw error;
+      const id=validation.recordId(req.body,'id',true),row=await one(req.db,'SELECT id,name,username FROM fleetsync.users WHERE id=$1',[id]);
+      if(!row) throw new validation.HttpError(404,'Akun tidak ditemukan.');
+      res.status(error.status);if(error.retryAfter) res.set('Retry-After',String(error.retryAfter));
+      return view(req,res,'account-reset',{row,errorMessage:error.message});
+    }
   });
   for(const action of ['recovery-email-save','recovery-email-verify']) app.post('/'+action,async(req,res)=>{
     req.auth.csrf(req);
@@ -110,7 +142,14 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
     if(page==='operator-form') data.row=req.query.id?await req.repo.operator(validation.recordId(req.query,'id',true)):{id:'',version:0,site:'BCP',name:'',nik:'',unit:'',equipment:'',last_date:new Date().toISOString().slice(0,10)};
     if(page==='audit') data.rows=await req.repo.auditRows();
     if(page==='profile') {data.values=req.user;data.recoverySettings=await req.recovery.settings(req.user.id);}
-    if(page==='accounts') data.accounts=(await req.db.query('SELECT id,name,username,created_at FROM fleetsync.users ORDER BY created_at,id')).rows;
+    if(page==='accounts') data.accounts=(await req.db.query('SELECT id,name,username,created_at,is_admin,must_change_password FROM fleetsync.users ORDER BY created_at,id')).rows;
+    if(page==='account-reset') {
+      if(!req.user.is_admin) throw new validation.HttpError(403,'Hanya administrator yang dapat mereset password akun lain.');
+      const id=validation.recordId(req.query,'id',true);
+      if(String(id)===String(req.user.id)) return res.redirect(303,url('profile')+'#password-title');
+      data.row=await one(req.db,'SELECT id,name,username FROM fleetsync.users WHERE id=$1',[id]);
+      if(!data.row) throw new validation.HttpError(404,'Akun tidak ditemukan.');
+    }
     return view(req,res,page,data);
   });
   for(const action of actions) app.post('/'+action,upload,async(req,res)=>{
@@ -154,7 +193,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
       res.status(error.status||409);if(error.retryAfter) res.set('Retry-After',String(error.retryAfter));const errorMessage=error.code==='23505'?(action.includes('account')||action==='profile-save'?'Username sudah digunakan.':'Data duplikat. Periksa identitas operator atau penugasan.'):error.message;
       const values=Object.fromEntries(Object.entries(req.body).filter(([key,value])=>['name','username'].includes(key)&&typeof value==='string'));
       if(action==='profile-save') return view(req,res,'profile',{values,errorMessage,recoverySettings:await req.recovery.settings(req.user.id)});
-      if(action==='account-create') return view(req,res,'accounts',{values,errorMessage,accounts:(await req.db.query('SELECT id,name,username,created_at FROM fleetsync.users ORDER BY created_at,id')).rows});
+      if(action==='account-create') return view(req,res,'accounts',{values,errorMessage,accounts:(await req.db.query('SELECT id,name,username,created_at,is_admin,must_change_password FROM fleetsync.users ORDER BY created_at,id')).rows});
       if(action==='import') return view(req,res,'import',{errorMessage});
       if(['lineup-save','operator-save'].includes(action)) {
         const isLineup=action==='lineup-save',safeKeys=isLineup?['site','work_date','shift','type_category','unit','equipment','operator_name','nik','dh','mine','ftw','source_status','note']:['site','name','nik','unit','equipment','last_date'];

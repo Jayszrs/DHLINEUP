@@ -2,7 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { parseCookie } from 'cookie';
 import bcrypt from 'bcryptjs';
 import { audit, one } from './db.js';
-import { HttpError, identity, newPassword, text } from './validation.js';
+import { HttpError, identity, newPassword, text, recordId } from './validation.js';
 
 const random = () => randomBytes(32).toString('hex');
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -18,7 +18,7 @@ export class Auth {
     let session = /^[a-f0-9]{64}$/.test(cookie || '') ? await one(this.db, 'SELECT * FROM fleetsync.sessions WHERE id=$1 AND expires_at>now()', [digest(cookie)]) : null;
     if (!session) session = await this.establish(req, res, null);
     req.session = session;
-    req.user = session.user_id ? await one(this.db, 'SELECT id,name,username,created_at FROM fleetsync.users WHERE id=$1', [session.user_id]) : null;
+    req.user = session.user_id ? await one(this.db, 'SELECT id,name,username,created_at,is_admin,must_change_password FROM fleetsync.users WHERE id=$1', [session.user_id]) : null;
     if (req.user) await this.db.query("UPDATE fleetsync.sessions SET expires_at=now()+interval '8 hours' WHERE id=$1", [session.id]);
   }
   async establish(req, res, userId, db = this.db) {
@@ -49,7 +49,7 @@ export class Auth {
     await this.db.transaction(async tx => {
       await tx.query("SELECT setting_value FROM fleetsync.app_settings WHERE setting_key='bootstrap' FOR UPDATE");
       if (Number((await one(tx, 'SELECT count(*) AS n FROM fleetsync.users')).n)) throw new HttpError(409, 'Akun pertama sudah dibuat. Silakan masuk.');
-      const user = await one(tx, 'INSERT INTO fleetsync.users(name,username,password_hash) VALUES($1,$2,$3) RETURNING id', [name, username, await bcrypt.hash(password, 12)]);
+      const user = await one(tx, 'INSERT INTO fleetsync.users(name,username,password_hash,is_admin) VALUES($1,$2,$3,true) RETURNING id', [name, username, await bcrypt.hash(password, 12)]);
       await audit(tx, user.id, 'setup', 'user', user.id);
       await this.establish(req, res, user.id, tx);
     });
@@ -77,6 +77,51 @@ export class Auth {
   async saveProfile(req) {
     const { name, username } = identity(req.body);
     await this.db.transaction(async tx => { await tx.query('UPDATE fleetsync.users SET name=$1,username=$2 WHERE id=$3', [name, username, req.user.id]); await audit(tx, req.user.id, 'profile_update', 'user', req.user.id, { username }); });
+  }
+  async confirmPassword(req) {
+    const key = this.attemptKey(req, `reauth-${req.user.id}`);
+    await this.checkAttempts(key);
+    const owner = await one(this.db, 'SELECT id,password_hash,is_admin FROM fleetsync.users WHERE id=$1', [req.user.id]);
+    if (!owner || !await passwordMatches(text(req.body, 'current_password', 128, true), owner.password_hash)) {
+      await this.failAttempt(key);throw new HttpError(422, 'Password Anda saat ini belum cocok. Perubahan belum disimpan.');
+    }
+    return { owner, key };
+  }
+  async changePassword(req, res) {
+    const password = newPassword(req.body), { owner, key } = await this.confirmPassword(req);
+    if (await passwordMatches(password, owner.password_hash)) throw new HttpError(422, 'Gunakan password baru yang berbeda dari password saat ini.');
+    const passwordHash = await bcrypt.hash(password, 12);
+    await this.db.transaction(async tx => {
+      const current = await one(tx, 'SELECT password_hash FROM fleetsync.users WHERE id=$1 FOR UPDATE', [owner.id]);
+      if (!current || current.password_hash !== owner.password_hash) throw new HttpError(409, 'Password baru saja berubah. Masuk kembali lalu coba lagi.');
+      await tx.query('UPDATE fleetsync.users SET password_hash=$1,must_change_password=false WHERE id=$2', [passwordHash, owner.id]);
+      await this.revokePasswordAccess(tx, owner.id);
+      await tx.query('DELETE FROM fleetsync.login_attempts WHERE attempt_key=ANY($1::text[])', [[key, this.attemptKey(req, 'login', req.user.username)]]);
+      await audit(tx, owner.id, 'password_change', 'user', owner.id);
+      await this.establish(req, res, null, tx);
+    });
+  }
+  async resetAccountPassword(req) {
+    if (!req.user.is_admin) throw new HttpError(403, 'Hanya administrator yang dapat mereset password akun lain.');
+    const id = recordId(req.body, 'id', true), password = newPassword(req.body);
+    if (String(id) === String(req.user.id)) throw new HttpError(422, 'Untuk akun Anda sendiri, gunakan Ganti password di Profil.');
+    const { owner, key } = await this.confirmPassword(req), passwordHash = await bcrypt.hash(password, 12);
+    return this.db.transaction(async tx => {
+      const users = (await tx.query('SELECT id,username,password_hash,is_admin FROM fleetsync.users WHERE id=ANY($1::bigint[]) ORDER BY id FOR UPDATE', [[owner.id, id]])).rows;
+      const actor = users.find(user => String(user.id) === String(owner.id)), target = users.find(user => String(user.id) === String(id));
+      if (!actor?.is_admin || actor.password_hash !== owner.password_hash) throw new HttpError(403, 'Konfirmasi administrator berubah. Masuk kembali lalu coba lagi.');
+      if (!target) throw new HttpError(404, 'Akun tidak ditemukan.');
+      await tx.query('UPDATE fleetsync.users SET password_hash=$1,must_change_password=true WHERE id=$2', [passwordHash, target.id]);
+      await this.revokePasswordAccess(tx, target.id);
+      await tx.query('DELETE FROM fleetsync.login_attempts WHERE attempt_key=ANY($1::text[])', [[key, this.attemptKey(req, 'login', target.username)]]);
+      await audit(tx, actor.id, 'account_password_reset', 'user', target.id, { username: target.username, must_change_password: true });
+      return target.username;
+    });
+  }
+  async revokePasswordAccess(tx, userId) {
+    await tx.query('DELETE FROM fleetsync.sessions WHERE user_id=$1', [userId]);
+    await tx.query('DELETE FROM fleetsync.upload_tickets WHERE user_id=$1', [userId]);
+    await tx.query('UPDATE fleetsync.email_recovery SET reset_hash=NULL,reset_expires_at=NULL,verify_hash=NULL,verify_expires_at=NULL,pending_email=NULL WHERE user_id=$1', [userId]);
   }
   async createAccount(req) {
     const { name, username } = identity(req.body), password = newPassword(req.body), key = this.attemptKey(req, `reauth-${req.user.id}`);

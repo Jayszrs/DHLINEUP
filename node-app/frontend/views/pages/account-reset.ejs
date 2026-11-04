@@ -1,0 +1,14 @@
+<section class="editor-page">
+  <div class="page-title"><div><h2>Reset password akun</h2><p>Setelah identitas pengguna diverifikasi, tentukan password sementara untuk akun ini.</p></div></div>
+  <form class="editor-form" method="post" action="<%= url('account-password-reset') %>" data-saving>
+    <input type="hidden" name="csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= row.id %>">
+    <input type="hidden" name="administrator_username" autocomplete="username" value="<%= user.username %>">
+    <p><strong><%= row.name %></strong><br>@<%= row.username %></p>
+    <p class="muted">Semua sesi pengguna akan dikeluarkan. Sampaikan password sementara secara pribadi; pengguna wajib menggantinya setelah masuk.</p>
+    <div class="form-grid">
+      <label>Password sementara<input name="password" type="password" required minlength="10" maxlength="72" autocomplete="new-password"><small>Minimal 10 karakter, maksimal 72 byte.</small></label>
+      <label>Ulangi password sementara<input name="password_confirmation" type="password" required minlength="10" maxlength="72" autocomplete="new-password"></label>
+      <label class="full-span verification-field">Password administrator Anda<input name="current_password" type="password" required maxlength="128" autocomplete="current-password"><small>Gunakan password akun Anda sendiri untuk menyetujui reset.</small></label>
+    </div><div class="modal-actions"><a class="subtle-button" href="<%= url('accounts') %>">Batal</a><button class="btn primary" type="submit">Simpan password sementara</button></div>
+  </form>
+</section>
