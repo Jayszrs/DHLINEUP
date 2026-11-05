@@ -1,5 +1,23 @@
 'use strict';
 
+const autoFilters=document.querySelector('form[data-auto-filter]');
+if(autoFilters) {
+  let filterTimer;
+  const announce=document.createElement('span');announce.className='sr-only';announce.setAttribute('role','status');autoFilters.append(announce);
+  for(const input of autoFilters.querySelectorAll('select[name="site"],input[name="work_date"],select[name="shift"],select[name="type_category"]')) {
+    input.addEventListener('change',()=>{
+      clearTimeout(filterTimer);
+      filterTimer=setTimeout(()=>{if(autoFilters.checkValidity()) autoFilters.requestSubmit(autoFilters.querySelector('.show-button'));},180);
+    });
+  }
+  autoFilters.addEventListener('submit',event=>{
+    clearTimeout(filterTimer);
+    if(autoFilters.dataset.filterSubmitting==='true') {event.preventDefault();return;}
+    autoFilters.dataset.filterSubmitting='true';autoFilters.setAttribute('aria-busy','true');announce.textContent='Memuat hasil filter...';
+  });
+  window.addEventListener('pageshow',()=>{autoFilters.dataset.filterSubmitting='false';autoFilters.removeAttribute('aria-busy');announce.textContent='';});
+}
+
 const retryNotice = document.querySelector('[data-retry-after]');
 if (retryNotice) {
   const deadline = Date.now() + Number(retryNotice.dataset.retryAfter) * 1000;

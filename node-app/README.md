@@ -8,6 +8,10 @@ Backend memakai Node.js 22 dan Express. Frontend memakai HTML/EJS, CSS, JavaScri
 
 ## Menjalankan di laptop
 
+Login memakai layout dua kolom: foto tambang dari pengguna yang ditingkatkan kejernihannya melalui imagegen, lapisan hitam/amber, dan form putih. Halaman pemulihan memakai shell yang sama. Pada HP, foto menjadi header pendek di atas form. File publiknya `frontend/assets/login-mine-hd.png`; build menyalinnya ke `public/assets`.
+
+Filter Line Up tanggal/district/shift/jenis otomatis mengirim formulir GET setelah perubahan valid, dengan jeda 180 ms untuk menggabungkan perubahan berdekatan. Tombol Tampilkan, pencarian manual, ekspor, reset, URL filter dan fallback tanpa JavaScript tetap tersedia. Tanggal kosong berarti semua tanggal. Hasil dibaca dari server, bukan disaring dari data cache di browser.
+
 Profil akun menyimpan nama lengkap, username, NIK karyawan sebagai teks (nol di depan dipertahankan), site BCP/ACP/KCP/SSCP, dan foto. Foto PNG/JPG/WebP maksimal 2 MB mendapat preview sebelum disimpan; hasil disimpan privat sebagai WebP maksimal 512×512 tanpa metadata EXIF. Foto tampil pada menu akun. Semua akun dapat memperbarui profil sendiri; izin data tetap terpisah. Administrator dapat memperbarui NIK/site akun lain melalui Edit Profil & Role. NIK/site lama tetap kosong sampai diisi pemilik/administrator.
 
 Alamat utama kini `https://dhlineup.vercel.app/`. Nomor unit, jenis alat, dan tipe alat pada form Line Up/Operator menggunakan dropdown yang bisa dicari. Daftar awal memuat 178 DT dari tab **Daftar Unit** pada [spreadsheet sumber](https://docs.google.com/spreadsheets/d/1fPeEBkAP2mKc-yXhDUnFvWpfi7OFw8CYuYygO1QKqmo/edit), ditambah unit dan model yang sudah tersimpan. Hanya nomor DT yang disalin; data kecepatan tidak diimpor dan spreadsheet tidak diubah.

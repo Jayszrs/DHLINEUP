@@ -1,6 +1,7 @@
-<h1>Masuk ke DH Line Up</h1><p class="muted">Gunakan akun Pengelola untuk melanjutkan pekerjaan.</p>
-<form method="post" action="<%= url('login') %>" class="auth-form"><input type="hidden" name="csrf" value="<%= csrf %>">
+<h1>Masuk ke DH Line Up</h1><p class="muted">Masuk dengan akun Anda untuk mengelola penugasan operator.</p>
+<form method="post" action="<%= url('login') %>" class="auth-form login-form"><input type="hidden" name="csrf" value="<%= csrf %>">
 <label>Username<input name="username" required maxlength="80" autocomplete="username" value="<%= values.username || '' %>"></label>
 <label>Password<input type="password" name="password" required maxlength="128" autocomplete="current-password"></label>
-<button class="btn primary" type="submit">Masuk</button></form>
-<a class="auth-link" href="<%= url('forgot-password') %>">Lupa password?</a>
+<a class="auth-link login-forgot" href="<%= url('forgot-password') %>">Lupa password?</a>
+<button class="btn primary" type="submit">Masuk ke dashboard<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></form>
+<p class="login-account-help">Belum punya akun? Hubungi administrator site Anda.</p>
