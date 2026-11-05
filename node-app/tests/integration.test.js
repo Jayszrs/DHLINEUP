@@ -40,7 +40,7 @@ test('JavaScript app parity using a real isolated PostgreSQL engine',async t=>{
       assert.equal((await client.get('/setup')).headers.location,'/lineup');
     });
     await t.test('all authenticated screens render with the new template engine',async()=>{
-      for(const page of ['lineup','dashboard','master','dokumentasi','import','audit','profile','accounts','lineup-form','operator-form']) {
+      for(const page of ['lineup','dashboard','master','import','audit','profile','accounts','lineup-form','operator-form']) {
         const result=await client.get('/'+page);assert.equal(result.status,200,`${page}: ${result.text.slice(-200)}`);assert.ok(result.text.includes('TT Firs Neue')||result.text.includes('/assets/css/app.css'));
         assert.ok(!result.text.includes('<?php'));assert.ok(!result.text.includes('index.php'));
       }

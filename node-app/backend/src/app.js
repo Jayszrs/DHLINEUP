@@ -9,13 +9,14 @@ import { Auth, ROLE, accountVersion, canEditData } from './auth.js';
 import { Mailer } from './mail.js';
 import { Recovery } from './recovery.js';
 import { equipmentOptions, addEquipmentOption, suggestedKind } from './catalog.js';
+import { speedRoutes } from './speed-routes.js';
 import { Repository } from './repository.js';
 import { Storage } from './storage.js';
 import * as validation from './validation.js';
 import { HEADERS,readSpreadsheet,exportRows,xlsx,csv } from './spreadsheet.js';
 
 const ROOT=fileURLToPath(new URL('../../',import.meta.url));
-const pages=['lineup','dashboard','detail','lineup-form','master','operator-form','dokumentasi','import','audit','profile','accounts','account-reset','account-edit'];
+const pages=['lineup','dashboard','detail','lineup-form','master','operator-form','import','audit','profile','accounts','account-reset','account-edit'];
 const actions=['lineup-save','lineup-delete','operator-save','operator-delete','profile-save','account-create','logout','import'];
 const titles={'lineup':'DH Line Up',dashboard:'Dashboard',detail:'Detail Unit','lineup-form':'Form Line Up',master:'Operator','operator-form':'Form Operator',dokumentasi:'Dokumentasi',import:'Impor Data',audit:'Riwayat Perubahan',profile:'Profil Saya',accounts:'Kelola Akun','account-reset':'Reset Password Akun','account-edit':'Edit Profil & Role',login:'Login',setup:'Buat Akun Pertama','forgot-password':'Lupa Password','reset-password':'Password Baru',error:'Kesalahan'};
 const url=(page='lineup',params={})=>'/'+page+(Object.keys(params).length?'?'+new URLSearchParams(Object.entries(params).filter(([,v])=>v!==undefined&&v!==null)).toString():'');
@@ -42,7 +43,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
   const view=async(req,res,page,data={})=>{
     const flash=await req.auth.takeFlash(req);
     if(['lineup-form','operator-form'].includes(page)) {data.equipmentCatalog=await equipmentOptions(req.db);if(data.row&&!data.row.equipment_kind) data.row.equipment_kind=suggestedKind(data.row.unit);}
-    const locals={page,label:titles[page],user:req.user,canEditData:canEditData(req.user),csrf:req.session.csrf,flash,errorMessage:'',retryAfter:0,recoverySettings:{},mailReady:req.mail.ready,values:{},row:{},rows:[],filters:{},total:0,accounts:[],title:'',message:'',activationRequired:production,storageMode:req.storage.client?'signed':'local',url,asset,dateId,status,chipTone,evidenceUrl,avatarUrl,ROLE,accountVersion,...validation,...data};
+    const locals={page,label:titles[page],user:req.user,canEditData:canEditData(req.user),csrf:req.session.csrf,flash,errorMessage:'',retryAfter:0,recoverySettings:{},mailReady:req.mail.ready,values:{},row:{},rows:[],filters:{},total:0,accounts:[],title:'',message:'',activationRequired:production,speedPage:'',storageMode:req.storage.client?'signed':'local',url,asset,dateId,status,chipTone,evidenceUrl,avatarUrl,ROLE,accountVersion,...validation,...data};
     const html=ejs.render(templates['layout.ejs'],locals,{filename:'fleetsync/layout.ejs',cache:production,includer(name){
       const key=name.replace(/^(\.\.\/)+/,'').replace(/\.ejs$/,'')+'.ejs';
       if(!Object.hasOwn(templates,key)) throw new Error('Template tidak ditemukan.');
@@ -169,9 +170,11 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
     const rows=kind==='template'?[HEADERS]:exportRows(kind==='master'?await req.repo.operators(filters):await req.repo.lineups(filters),kind);
     res.attachment(`DH_Line_Up_${kind}.${format}`).type(format==='csv'?'text/csv; charset=utf-8':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(format==='csv'?csv(rows):xlsx(rows));
   });
+  app.get('/dokumentasi',(_req,res)=>res.redirect(303,url('lineup')));
+  speedRoutes(app,view,url);
   for(const page of pages) app.get('/'+page,async(req,res)=>{
     const filters=validation.filters(req.query),data={filters};
-    if(['lineup','dokumentasi'].includes(page)) {data.rows=await req.repo.lineups(filters);data.total=Number((await one(req.db,'SELECT count(*) AS n FROM fleetsync.lineups')).n);}
+    if(page==='lineup') {data.rows=await req.repo.lineups(filters);data.total=Number((await one(req.db,'SELECT count(*) AS n FROM fleetsync.lineups')).n);}
     if(page==='dashboard') data.rows=await req.repo.lineups({site:filters.site});
     if(page==='master') data.rows=await req.repo.operators(filters);
     if(page==='detail') data.row=await req.repo.lineup(validation.text(req.query,'id',80,true));

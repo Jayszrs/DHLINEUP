@@ -1,8 +1,10 @@
 # Deployment Vercel + Supabase
 
-## Status terverifikasi — 4 November 2026
+## Status terverifikasi — 5 November 2026
 
 - URL aplikasi: https://dhlineup.vercel.app/
+- Modul Recap Fleet Speed Monitoring: 178 unit, 1.710 rekap unit/hari, 746.588 baris GPS tersedia; seluruh 186 tab sumber diarsipkan privat dan checksum cloud diverifikasi. Total rekap 2.673.391 catatan, 2.109.254 bergerak, Σ speed 37.703.450,31; rata-rata berbobot 14,10 / 17,88 km/jam dan maksimum 101,06 km/jam. Rekap berasal dari tabel harian terverifikasi di spreadsheet, bukan dihitung ulang dari subset GPS yang tersedia.
+- Tabel `speed_units`, `speed_daily`, `speed_source_sheets` terpisah dari Line Up/Operator. Arsip nilai seluruh tab disimpan gzip di bucket privat (sekitar 15,5 MB). Workbook Excel asli dan CSV snapshot hanya berada di `.private`, tidak dimasukkan Git/deployment. Impor awal: `node --env-file=.private/supabase.env backend/cli/import-speed.js .private/speed-package/manifest.json`. Snapshot identik dilewati; snapshot berbeda ditolak jika rekap sudah berisi data agar perubahan pengguna tidak tertimpa.
 - Profil: jalankan `node --env-file=.private/supabase.env backend/cli/migrate-profile.js` dari `node-app` sebelum deployment pertama fitur ini. Migrasi menambah `users.nik`, `users.site`, `users.profile_photo` dan jenis tiket `profile_photo`. Identitas, password, role, izin data, serta penugasan lama dipertahankan. Foto menggunakan bucket privat yang sama; tiket dibatasi 2 MB dan milik pengguna yang meminta. Akun akses lihat dapat meminta tiket foto sendiri, tetapi tetap ditolak untuk unggah bukti/impor. `/avatar` memerlukan sesi dan hanya tersedia bagi pemilik foto atau administrator.
 - Domain ini terpasang pada project `dh-fleetsync` yang sama; Supabase dan akun pengguna tetap memakai project semula. Cookie login berbeda untuk setiap domain, sehingga buka alamat baru lalu login kembali.
 - Migrasi katalog alat dijalankan sebelum deploy: `node --env-file=.private/supabase.env backend/cli/migrate-equipment.js` dari folder `node-app`. Migrasi hanya menambah `equipment_kind` pada Line Up/Operator dan tabel privat `equipment_options`; model dan penugasan lama dipertahankan. Inisialisasi database baru menjalankan migrasi ini otomatis.
@@ -14,7 +16,7 @@
 - Root Directory Vercel: `node-app`.
 - Framework Express, Node.js 22, `npm ci`, build `npm run build`, fungsi di Singapura.
 - Supabase Free dibuat lewat Marketplace dan terhubung ke development, preview, production.
-- Schema PostgreSQL privat `fleetsync`: sembilan tabel, termasuk `email_recovery`. Bucket `fleetsync-private`: tidak publik.
+- Schema PostgreSQL privat `fleetsync` menyimpan akun, Line Up, katalog alat, dan tabel speed terpisah. Bucket `fleetsync-private`: tidak publik.
 - Snapshot lokal sudah dimigrasikan: 53 Line Up, 49 operator, satu akun, 54 riwayat, 105 gambar (102 bukti + 3 referensi).
 
 ## Batas paket dan penggunaan
@@ -92,6 +94,6 @@ Panduan yang dibaca: https://vercel.com/get-started.md.
 
 ## Pemeriksaan
 
-51 tes integrasi lokal lulus, termasuk edit profil/role, kewenangan administrator, perlindungan administrator terakhir saat perubahan bersamaan, reset/password sementara wajib diganti, ganti password sendiri, verifikasi email, kode sekali pakai, pencabutan sesi dan pembatas login. Build lokal dan build deployment sebelumnya berhasil. HTTP online `/health`, `/login`, CSS dan font memberi status 200; font cocok dengan file pengguna. Pemeriksaan cloud memverifikasi 105 checksum, akses anonim yang ditolak, CORS, unggah langsung, tiket sekali pakai, dan akses gambar privat. Pemulihan lewat administrator tidak membutuhkan pengiriman email.
+57 tes integrasi lokal lulus, termasuk edit profil/role, kewenangan administrator, perlindungan administrator terakhir saat perubahan bersamaan, reset/password sementara wajib diganti, ganti password sendiri, verifikasi email, kode sekali pakai, pencabutan sesi dan pembatas login. Build lokal dan build deployment sebelumnya berhasil. HTTP online `/health`, `/login`, CSS dan font memberi status 200; font cocok dengan file pengguna. Pemeriksaan cloud memverifikasi 105 checksum, akses anonim yang ditolak, CORS, unggah langsung, tiket sekali pakai, dan akses gambar privat. Pemulihan lewat administrator tidak membutuhkan pengiriman email.
 
 Laporan teknis privat tersedia di `node-app/.private/cloud-verification.json`, `http-verification.json`, `data-access-migration.json`, dan laporan tes. Snapshot privat berada di `node-app/.private/migration/local-snapshot.zip` dan tidak boleh dikirim sebagai source deployment. REA berhasil memeriksa fixture lokal memakai Chrome terpisah; kontrol tab Chrome pengguna melalui CUA masih bermasalah.

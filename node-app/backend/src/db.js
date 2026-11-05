@@ -14,7 +14,7 @@ export async function database({ url = process.env.DATABASE_URL || process.env.P
     const adapt = client => ({
       query: async (sql, params = []) => {
         const result = await client.query(sql, params);
-        const rows = result.rows.map(row => Object.fromEntries(Object.entries(row).map(([key,value]) => [key, ['work_date','last_date'].includes(key) && value instanceof Date ? value.toISOString().slice(0,10) : value])));
+        const rows = result.rows.map(row => Object.fromEntries(Object.entries(row).map(([key,value]) => [key, ['work_date','first_date','last_date'].includes(key) && value instanceof Date ? value.toISOString().slice(0,10) : value])));
         return { ...result, rows, rowCount: result.affectedRows ?? rows.length };
       },
     });
@@ -46,6 +46,7 @@ export async function initialize(db) {
   await db.exec(await readFile(fileURLToPath(new URL('../../database/schema.sql', import.meta.url)), 'utf8'));
   await db.exec(await readFile(new URL('../../database/equipment-catalog.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../../database/user-profile.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../../database/speed.sql',import.meta.url),'utf8'));
 }
 
 export async function one(db, sql, values = []) { return (await db.query(sql, values)).rows[0]; }

@@ -8,6 +8,12 @@ Backend memakai Node.js 22 dan Express. Frontend memakai HTML/EJS, CSS, JavaScri
 
 ## Menjalankan di laptop
 
+Modul **Recap Fleet Speed Monitoring** memiliki navigasi lipat Dashboard, Rekap Harian, Rekap Bulanan, dan Daftar Unit. Klik DT membuka rekap harian, grafik, dan GPS asli berhalaman 100 baris; seluruh kolom asli dipertahankan termasuk format khusus DT2376. Sumber adalah [Recap Speed DT 2026](https://docs.google.com/spreadsheets/d/1fPeEBkAP2mKc-yXhDUnFvWpfi7OFw8CYuYygO1QKqmo/edit). Snapshot 5 November 2026 memuat 178 unit, 1.710 rekap unit/hari dan 746.588 baris GPS. Seluruh 186 tab diarsipkan privat, termasuk tab pendukung yang tidak dijadikan menu aplikasi.
+
+Rekap terverifikasi 1–16 Oktober dipertahankan: 2.673.391 catatan, 2.109.254 bergerak, jumlah speed 37.703.450,31. Rata-rata dihitung sebagai jumlah speed dibagi jumlah catatan (14,10 km/jam) atau catatan bergerak (17,88 km/jam); bukan rata-rata dari rata-rata harian. GPS yang tersedia dalam tab tidak selalu mencakup seluruh sejarah file GPS asli, sehingga tampil terpisah dari rekap. November/Desember tanpa data ditampilkan kosong, bukan nilai rata-rata nol.
+
+Akun dengan izin edit data dapat input/edit/hapus rekap harian melalui **Input rekap speed**. Validasi jumlah, versi data, audit, dan CSRF berlaku; Pengelola akses lihat tetap dapat membaca/mengekspor. Data Line Up/Operator tidak diubah oleh modul ini. Perubahan spreadsheet tidak tersinkron otomatis. Tombol Impor Excel hanya berada di DH Line Up; halaman Dokumentasi dihapus dan URL lamanya diarahkan ke Line Up.
+
 Login memakai layout dua kolom: foto tambang dari pengguna yang ditingkatkan kejernihannya melalui imagegen, lapisan hitam/amber, dan form putih. Halaman pemulihan memakai shell yang sama. Pada HP, foto menjadi header pendek di atas form. File publiknya `frontend/assets/login-mine-hd.png`; build menyalinnya ke `public/assets`.
 
 Filter Line Up tanggal/district/shift/jenis otomatis mengirim formulir GET setelah perubahan valid, dengan jeda 180 ms untuk menggabungkan perubahan berdekatan. Tombol Tampilkan, pencarian manual, ekspor, reset, URL filter dan fallback tanpa JavaScript tetap tersedia. Tanggal kosong berarti semua tanggal. Hasil dibaca dari server, bukan disaring dari data cache di browser.
@@ -84,7 +90,7 @@ Ekspor hanya membaca MySQL sumber dan menyimpan paket privat. Import snapshot ya
 
 ## Validasi
 
-- `npm test`: 51 tes integrasi lulus memakai PostgreSQL sementara, termasuk edit profil/role oleh administrator, pencegahan hilangnya administrator terakhir, reset password, password sementara wajib diganti, pemulihan email dan jeda login.
+- `npm test`: 57 tes integrasi lulus memakai PostgreSQL sementara, termasuk edit profil/role oleh administrator, pencegahan hilangnya administrator terakhir, reset password, password sementara wajib diganti, pemulihan email dan jeda login.
 - Build Vercel berhasil dan deployment berstatus READY.
 - Endpoint online `/health` mengembalikan HTTP 200 dengan runtime Node.
 - Halaman login, CSS, dan font online mengembalikan HTTP 200; font sama persis dengan file pengguna.

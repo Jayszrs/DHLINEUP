@@ -1,0 +1,6 @@
+<form method="get" action="<%= url(speedPage) %>" class="speed-filters">
+<% if(speedPage==='speed-unit') { %><input type="hidden" name="unit" value="<%= speedFilters.unit %>"><input type="hidden" name="tab" value="<%= tab %>"><% } %>
+<label>Dari tanggal<input type="date" name="from" min="1900-01-01" value="<%= speedFilters.from %>"></label><label>Sampai tanggal<input type="date" name="to" min="1900-01-01" value="<%= speedFilters.to %>"></label>
+<% if(speedPage==='speed-units') { %><label>Cari unit<input name="search" placeholder="Ketik nomor DT" value="<%= speedFilters.search %>"></label><% } %>
+<button class="btn primary" type="submit">Terapkan</button><a class="subtle-button" href="<%= url(speedPage,speedPage==='speed-unit'?{unit:speedFilters.unit}:{}) %>">Reset</a>
+</form>
