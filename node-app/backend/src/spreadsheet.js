@@ -24,15 +24,17 @@ function nodeText(value) {
   return array(value.r).map(nodeText).join('');
 }
 function columnIndex(reference) { let index=0; for(const c of reference.replace(/\d/g,'')) index=index*26+c.charCodeAt(0)-64; return index-1; }
-function document(buffer,extension) {
+function document(buffer,extension,{allSheets=false,maxRows=5030}={}) {
   if (buffer.length>10*1024*1024) throw new HttpError(422,'Maksimal ukuran file 10 MB.');
   if (extension==='csv') {
     let content;
-    try { content=new TextDecoder('utf-8',{fatal:true}).decode(buffer); }
+    try { content=new TextDecoder(buffer[0]===0xff&&buffer[1]===0xfe?'utf-16le':buffer[0]===0xfe&&buffer[1]===0xff?'utf-16be':'utf-8',{fatal:true}).decode(buffer); }
     catch { content=new TextDecoder('windows-1252').decode(buffer); }
     content=content.replace(/^\uFEFF/,'');
-    const first=content.split(/\r?\n/,1)[0],delimiter=[',',';','\t'].sort((a,b)=>first.split(b).length-first.split(a).length)[0];
-    return { rows:parse(content,{delimiter,relax_column_count:true,skip_empty_lines:false,max_record_size:1000000}),date1904:false };
+    const first=allSheets?content.split(/\r?\n/,30).join('\n'):content.split(/\r?\n/,1)[0],delimiter=[',',';','\t'].sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+    const rows=parse(content,{delimiter,relax_column_count:true,skip_empty_lines:false,max_record_size:1000000,to:maxRows+1});
+    if(rows.length>maxRows)throw new HttpError(422,'Jumlah baris file melebihi batas impor.');
+    return {rows,sheets:[{name:'CSV',rows}],date1904:false};
   }
   if (extension!=='xlsx') throw new HttpError(422,'Format yang didukung: XLSX dan CSV. Simpan ulang file XLS lama menjadi XLSX.');
   let total=0,entries=0;
@@ -46,14 +48,17 @@ function document(buffer,extension) {
   if (!files['xl/workbook.xml']) throw new HttpError(422,'Struktur XLSX tidak lengkap.');
   const workbook=parseXml(files['xl/workbook.xml']).workbook;
   const relationships=array(parseXml(files['xl/_rels/workbook.xml.rels']).Relationships?.Relationship);
-  const sheet=array(workbook.sheets?.sheet)[0], rel=relationships.find(r=>r['@_Id']===sheet?.['@_id']);
+  const shared=files['xl/sharedStrings.xml']?array(parseXml(files['xl/sharedStrings.xml']).sst?.si).map(nodeText):[];
+  const selected=allSheets?array(workbook.sheets?.sheet):array(workbook.sheets?.sheet).slice(0,1),sheets=[];let rowCount=0;
+  if(selected.length>200)throw new HttpError(422,'Maksimal 200 sheet per impor.');
+  for(const sheet of selected){
+  const rel=relationships.find(r=>r['@_Id']===sheet?.['@_id']);
   if (!rel || rel['@_TargetMode']==='External') throw new HttpError(422,'Worksheet Excel tidak valid.');
   const sheetPath=path.posix.normalize('xl/'+rel['@_Target'].replace(/^\/?xl\//,''));
   if (!sheetPath.startsWith('xl/worksheets/') || !files[sheetPath]) throw new HttpError(422,'Worksheet tidak tersedia.');
-  const shared=files['xl/sharedStrings.xml']?array(parseXml(files['xl/sharedStrings.xml']).sst?.si).map(nodeText):[];
   const rows=[];
   for(const row of array(parseXml(files[sheetPath]).worksheet?.sheetData?.row)) {
-    if(rows.length>=5030) throw new HttpError(422,'Maksimal 5.000 baris data per impor.');
+    if(++rowCount>maxRows) throw new HttpError(422,'Jumlah baris file melebihi batas impor.');
     const cells=[];
     for(const cell of array(row.c)) {
       const index=columnIndex(String(cell['@_r'] || 'A1'));
@@ -62,7 +67,13 @@ function document(buffer,extension) {
     }
     rows.push(cells);
   }
-  return { rows,date1904:['1','true'].includes(String(workbook.workbookPr?.['@_date1904'])) };
+  sheets.push({name:String(sheet['@_name']||''),rows});
+  }
+  return {rows:sheets[0]?.rows||[],sheets,date1904:['1','true'].includes(String(workbook.workbookPr?.['@_date1904']))};
+}
+export function readSpreadsheetTables(buffer,extension) {
+  try{return document(buffer,extension,{allSheets:true,maxRows:200030});}
+  catch(error){if(error instanceof HttpError)throw error;throw new HttpError(422,'File tidak dapat dibaca. Gunakan XLSX atau CSV yang valid.');}
 }
 export function readSpreadsheet(buffer,extension) {
   try {

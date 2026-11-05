@@ -6,6 +6,13 @@
   font-display:swap
 }
 .equipment-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.speed-import-table{min-width:900px;font-variant-numeric:tabular-nums}
+.speed-import-table th,.speed-import-table td{white-space:nowrap}
+.speed-import-page .import-filename{overflow-wrap:anywhere;font-weight:700;color:var(--ink)}
+.speed-import-check{display:flex;align-items:flex-start;gap:12px;line-height:1.6;cursor:pointer}
+.speed-import-check input{width:18px;height:18px;flex-shrink:0;margin:3px 0 0;accent-color:var(--accent)}
+.speed-import-page .import-guide details{margin-top:16px}
+.speed-import-page .import-guide summary{cursor:pointer;font-weight:700}
 .speed-dashboard-content{--comparison-all:#3675d8;--comparison-moving:#d64a4a}
 [data-theme=dark] .speed-dashboard-content{--comparison-all:#78a8ff;--comparison-moving:#ff7c76}
 .speed-comparison .section-heading>div>p{font-size:12px;color:var(--muted);margin:8px 0 0}

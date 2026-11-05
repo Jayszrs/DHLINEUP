@@ -33,3 +33,25 @@ ALTER TABLE fleetsync.speed_units ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fleetsync.speed_daily ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fleetsync.speed_source_sheets ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON fleetsync.speed_units,fleetsync.speed_daily,fleetsync.speed_source_sheets FROM PUBLIC;
+CREATE TABLE IF NOT EXISTS fleetsync.speed_gps_overrides (
+  unit varchar(60) NOT NULL REFERENCES fleetsync.speed_units(unit),
+  work_date date NOT NULL,
+  object_path text NOT NULL,
+  row_count integer NOT NULL CHECK(row_count>=0),
+  base_count integer NOT NULL CHECK(base_count>=0),
+  PRIMARY KEY(unit,work_date)
+);
+CREATE TABLE IF NOT EXISTS fleetsync.speed_import_jobs (
+  id char(64) PRIMARY KEY,
+  user_id bigint NOT NULL REFERENCES fleetsync.users(id) ON DELETE CASCADE,
+  object_path text NOT NULL,
+  filename varchar(180) NOT NULL,
+  metadata jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL DEFAULT now()+interval '2 hours',
+  applied_at timestamptz
+);
+CREATE INDEX IF NOT EXISTS speed_import_jobs_owner ON fleetsync.speed_import_jobs(user_id,created_at);
+ALTER TABLE fleetsync.speed_gps_overrides ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fleetsync.speed_import_jobs ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON fleetsync.speed_gps_overrides,fleetsync.speed_import_jobs FROM PUBLIC;

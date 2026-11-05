@@ -12,7 +12,7 @@ Modul **Recap Fleet Speed Monitoring** memiliki navigasi lipat Dashboard, Rekap 
 
 Rekap terverifikasi 1–16 Oktober dipertahankan: 2.673.391 catatan, 2.109.254 bergerak, jumlah speed 37.703.450,31. Rata-rata dihitung sebagai jumlah speed dibagi jumlah catatan (14,10 km/jam) atau catatan bergerak (17,88 km/jam); bukan rata-rata dari rata-rata harian. GPS yang tersedia dalam tab tidak selalu mencakup seluruh sejarah file GPS asli, sehingga tampil terpisah dari rekap. November/Desember tanpa data ditampilkan kosong, bukan nilai rata-rata nol.
 
-Akun dengan izin edit data dapat input/edit/hapus rekap harian melalui **Input rekap speed**. Validasi jumlah, versi data, audit, dan CSRF berlaku; Pengelola akses lihat tetap dapat membaca/mengekspor. Data Line Up/Operator tidak diubah oleh modul ini. Perubahan spreadsheet tidak tersinkron otomatis. Tombol Impor Excel hanya berada di DH Line Up; halaman Dokumentasi dihapus dan URL lamanya diarahkan ke Line Up.
+Akun dengan izin edit data dapat input/edit/hapus rekap harian melalui **Input rekap speed**. Validasi jumlah, versi data, audit, dan CSRF berlaku; Pengelola akses lihat tetap dapat membaca/mengekspor. Data Line Up/Operator tidak diubah oleh modul ini. Perubahan spreadsheet tidak tersinkron otomatis. Impor MDVR XLSX/CSV membaca Device Name, Speed, Creation Time dan menghitung rekap per DT/tanggal. Pratinjau menampilkan tambah/perbarui, duplikat identik, serta CSV seluruh perubahan; pemilik perlu mengonfirmasi file lengkap untuk tanggal yang diperbarui. Penyimpanan sekaligus mengganti hanya rekap dan GPS DT/tanggal tersebut, mempertahankan tanggal lain, lalu dashboard/laporan membaca hasil baru. Rekap harian CSV dengan jumlah catatan/bergerak/jumlah speed/maksimum juga didukung tanpa mengganti GPS. Pratinjau terikat pengguna, berlaku dua jam, dan versi yang berubah membatalkan seluruh impor. XLS lama perlu disimpan ulang menjadi XLSX; timestamp tanpa zona memakai WIB; timestamp berzona dikonversi ke WIB. Impor Line Up berada di halaman DH Line Up; impor MDVR terpisah tersedia melalui tombol **Impor Excel / CSV** pada Dashboard Speed; halaman Dokumentasi dihapus dan URL lamanya diarahkan ke Line Up.
 
 Login memakai layout dua kolom: foto tambang dari pengguna yang ditingkatkan kejernihannya melalui imagegen, lapisan hitam/amber, dan form putih. Halaman pemulihan memakai shell yang sama. Pada HP, foto menjadi header pendek di atas form. File publiknya `frontend/assets/login-mine-hd.png`; build menyalinnya ke `public/assets`.
 
@@ -69,7 +69,7 @@ Administrator juga dapat membuka **Kelola Akun > Edit profil & role** pada akun 
 
 Kode pemulihan email tetap tersedia untuk penggunaan mendatang jika SMTP diaktifkan; pengiriman email saat ini tidak digunakan. Tidak ada App Password atau konfigurasi email tambahan yang diperlukan untuk alur administrator.
 
-Impor maksimal 10 MB/5.000 baris dan gambar maksimal 5 MB. Di Vercel, browser mengunggah file langsung ke Supabase menggunakan tiket sementara yang terikat pengguna. Backend memeriksa kembali jenis, ukuran, kepemilikan dan masa berlaku sebelum menyimpan data. Gambar yang dibuka memerlukan login lalu mendapat URL berumur singkat.
+Impor Line Up maksimal 10 MB/5.000 baris; impor speed maksimal 10 MB/200.000 pembacaan/5.000 pasangan DT-tanggal. Gambar maksimal 5 MB. Di Vercel, browser mengunggah file langsung ke Supabase menggunakan tiket sementara yang terikat pengguna. Backend memeriksa kembali jenis, ukuran, kepemilikan dan masa berlaku sebelum menyimpan data. Gambar yang dibuka memerlukan login lalu mendapat URL berumur singkat.
 
 Form dan detail Line Up tidak lagi menampilkan Status Sumber/Catatan. Nilai historis tetap tersimpan dan tidak dikosongkan jika kedua kolom tidak dikirim saat edit; kompatibilitas impor/ekspor data lama tetap tersedia. Bukti FTW dan Mine Dispatch menampilkan preview lokal segera setelah gambar dipilih, dengan nama/ukuran file, status belum disimpan, tombol batal dan pembesaran gambar. Preview tidak mengunggah file sebelum Simpan. Bukti lama ditampilkan saat edit dan kembali muncul jika pilihan penggantinya dibatalkan. Validasi browser menolak format selain PNG/JPG/WebP, gambar yang tidak dapat dibaca, dan ukuran lebih dari 5 MB; validasi backend tetap berlaku.
 
@@ -90,7 +90,7 @@ Ekspor hanya membaca MySQL sumber dan menyimpan paket privat. Import snapshot ya
 
 ## Validasi
 
-- `npm test`: 58 tes integrasi lulus memakai PostgreSQL sementara, termasuk edit profil/role oleh administrator, pencegahan hilangnya administrator terakhir, reset password, password sementara wajib diganti, pemulihan email dan jeda login.
+- `npm test`: 69 tes integrasi lulus memakai PostgreSQL sementara, termasuk edit profil/role oleh administrator, pencegahan hilangnya administrator terakhir, reset password, password sementara wajib diganti, pemulihan email dan jeda login.
 - Build Vercel berhasil dan deployment berstatus READY.
 - Endpoint online `/health` mengembalikan HTTP 200 dengan runtime Node.
 - Halaman login, CSS, dan font online mengembalikan HTTP 200; font sama persis dengan file pengguna.

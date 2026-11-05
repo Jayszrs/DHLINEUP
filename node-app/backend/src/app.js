@@ -171,7 +171,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
     res.attachment(`DH_Line_Up_${kind}.${format}`).type(format==='csv'?'text/csv; charset=utf-8':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(format==='csv'?csv(rows):xlsx(rows));
   });
   app.get('/dokumentasi',(_req,res)=>res.redirect(303,url('lineup')));
-  speedRoutes(app,view,url);
+  speedRoutes(app,view,url,upload);
   for(const page of pages) app.get('/'+page,async(req,res)=>{
     const filters=validation.filters(req.query),data={filters};
     if(page==='lineup') {data.rows=await req.repo.lineups(filters);data.total=Number((await one(req.db,'SELECT count(*) AS n FROM fleetsync.lineups')).n);}
