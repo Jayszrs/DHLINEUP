@@ -3,6 +3,7 @@
 <title><%= label %> | DH Line Up</title><link rel="icon" type="image/png" href="<%= asset('dh-symbol.png') %>"><link rel="apple-touch-icon" href="<%= asset('dh-symbol.png') %>">
 <script src="<%= asset('js/theme.js') %>"></script><link rel="stylesheet" href="<%= asset('css/app.css') %>"><script src="<%= asset('js/app.js') %>" defer></script>
 <% if(['lineup-form','operator-form'].includes(page)) { %><script src="<%= asset('js/equipment-select.js') %>" defer></script><% } %>
+<% if(speedPage==='speed-dashboard') { %><script src="<%= asset('js/speed-dashboard.js') %>" defer></script><% } %>
 </head><body data-upload-mode="<%= storageMode %>"><a class="skip-link" href="#main-content">Lewati ke konten</a>
 <% if(user) { %><div class="app-shell"><aside class="sidebar" id="sidebar" aria-label="Navigasi utama">
 <a class="brand" href="<%= url('dashboard') %>" aria-label="DH Line Up, buka Dashboard"><span class="brand-signature"><img src="<%= asset('dh-symbol.png') %>" alt="" width="48" height="48"><span class="brand-wordmark">DH</span></span><span class="brand-caption">Line Up</span></a>

@@ -22,6 +22,11 @@ test('speed module preserves weighted recaps, GPS archives, permissions and Line
    const line=await admin.get('/lineup');assert.ok(line.text.includes('href="/import"'));const speed=await admin.get('/speed-dashboard');assert.ok(!speed.text.includes('href="/import"'));assert.ok(speed.text.includes('<details class="nav-group" open>'));assert.equal((await admin.get('/dokumentasi')).headers.location,'/lineup');
    assert.equal((await admin.get('/speed-export?kind=daily')).status,200);
   });
+  await t.test('dashboard comparison and recaps follow weighted date filters and empty periods',async()=>{
+   const dashboard=await admin.get('/speed-dashboard');assert.equal(dashboard.status,200);assert.ok(dashboard.text.includes('Semua: 19,00 km/jam; bergerak: 38,00 km/jam'));assert.ok(dashboard.text.includes('Rekap harian terbaru'));assert.ok(dashboard.text.includes('Ringkasan bulanan fleet'));assert.ok(dashboard.text.includes('data-comparison-mode="detail"'));
+   const filtered=await admin.get('/speed-dashboard?from=2026-10-01&to=2026-10-01');assert.equal(filtered.status,200);assert.ok(filtered.text.includes('Semua: 10,00 km/jam; bergerak: 20,00 km/jam'));assert.ok(!filtered.text.includes('Semua: 19,00 km/jam;'));
+   const empty=await admin.get('/speed-dashboard?from=2027-01-01');assert.equal(empty.status,200);assert.ok(empty.text.includes('Belum ada unit berdata pada periode ini'));assert.ok(!empty.text.includes('class="comparison-bar all"'));
+  });
   await t.test('manual save validates counts, applies optimistic versions and can delete one recap only',async()=>{
    assert.equal((await admin.post('/speed-save').type('form').send({...base,csrf,unit:'DT2695',moving_count:'11'})).status,422);
    const created=await admin.post('/speed-save').type('form').send({...base,csrf,unit:'DT2695'});assert.equal(created.status,303);assert.equal((await admin.post('/speed-save').type('form').send({...base,csrf,unit:'DT2695'})).status,409);

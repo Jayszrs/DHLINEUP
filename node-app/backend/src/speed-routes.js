@@ -11,7 +11,7 @@ export function speedRoutes(app,view,url) {
   const repo=new SpeedRepository(req.db,req.user.id),filters=speedFilters(req.query),data={speedPage:page,label:labels[page],speedFilters:filters,speedNumber};
   if(page==='speed-unit'){filters.unit=speedUnit(req.query,true);data.speedUnit=await repo.unit(filters.unit);const rawPage=Number(text(req.query,'raw_page',8)||1);if(!Number.isSafeInteger(rawPage)||rawPage<1)throw new HttpError(422,'Halaman GPS tidak valid.');data.tab=text(req.query,'tab',10)==='gps'?'gps':'recap';data.gps=data.tab==='gps'?await repo.records(filters.unit,filters,sourceFiles(req.storage),rawPage):{total:data.speedUnit.raw_count,rows:[],headers:[],page:1,pages:1};data.label='Speed '+filters.unit;}
   [data.speedSummary,data.speedDaily,data.speedUnits]=await Promise.all([repo.summary(filters),repo.daily(filters),repo.units(filters)]);
-  if(page==='speed-monthly')data.speedMonthly=await repo.monthly(filters);
+  if(['speed-dashboard','speed-monthly'].includes(page))data.speedMonthly=await repo.monthly(filters);
   return view(req,res,'speed',data);
  });
  app.get('/speed-form',async(req,res)=>{requireEditor(req);const repo=new SpeedRepository(req.db,req.user.id),unit=speedUnit(req.query),day=date(req.query,'work_date',false);const row=unit&&day?await repo.record(unit,day):null;return view(req,res,'speed-form',{label:row?'Edit Rekap Speed':'Input Rekap Speed',speedPage:'speed-form',speedUnits:await repo.units(),row:row||{unit,work_date:day||new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'}),version:0,total_count:'',moving_count:'',speed_sum:'',max_speed:''}});});
