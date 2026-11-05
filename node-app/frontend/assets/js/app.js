@@ -73,7 +73,7 @@ document.addEventListener('keydown', (event) => {
     if (profileMenu?.open) { profileMenu.open = false; profileMenu.querySelector('summary').focus(); }
   }
   if (event.key === 'Tab' && mobileLayout.matches && sidebar?.classList.contains('open')) {
-    const items = [...sidebar.querySelectorAll('a, button')];
+    const items = [...sidebar.querySelectorAll('a, button, summary')].filter(item=>item.getClientRects().length&&!item.disabled&&!item.closest('details:not([open]) .nav-children'));
     const first = items[0], last = items[items.length - 1];
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
     if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
