@@ -19,9 +19,9 @@ export class Mailer {
     const verification = purpose === 'verify';
     try {
       await this.transport.sendMail({
-        from: { name: 'DH FleetSync', address: this.from }, to,
-        subject: verification ? 'Verifikasi email pemulihan FleetSync' : 'Kode reset password FleetSync',
-        text: `DH FleetSync\n\n${verification ? 'Verifikasi alamat email pemulihan Anda' : 'Gunakan kode ini untuk mengganti password Anda'}:\n\n${code}\n\nKode berlaku 10 menit dan hanya bisa digunakan sekali. Masukkan pada halaman ${verification ? 'Profil' : 'Lupa password'} di https://dhlineup.vercel.app.\n\nJangan bagikan kode ini. Jika Anda tidak meminta kode, abaikan email ini.`,
+        from: { name: 'DH Line Up', address: this.from }, to,
+        subject: verification ? 'Verifikasi email pemulihan DH Line Up' : 'Kode reset password DH Line Up',
+        text: `DH Line Up\n\n${verification ? 'Verifikasi alamat email pemulihan Anda' : 'Gunakan kode ini untuk mengganti password Anda'}:\n\n${code}\n\nKode berlaku 10 menit dan hanya bisa digunakan sekali. Masukkan pada halaman ${verification ? 'Profil' : 'Lupa password'} di https://dhlineup.vercel.app.\n\nJangan bagikan kode ini. Jika Anda tidak meminta kode, abaikan email ini.`,
       });
     } catch {
       throw new HttpError(503, 'Email belum berhasil dikirim. Coba lagi sebentar atau hubungi pengelola aplikasi.');

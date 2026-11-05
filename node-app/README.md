@@ -1,4 +1,4 @@
-# DH FleetSync — JavaScript + Supabase
+# DH Line Up — JavaScript + Supabase
 
 Versi tanpa PHP sudah diterbitkan di **https://dhlineup.vercel.app/** pada 4 November 2026. Project Vercel `jay-9d47/dh-fleetsync` milik `jaelanisurya.akademicrypto@gmail.com` terhubung ke Supabase Free melalui Vercel Marketplace.
 

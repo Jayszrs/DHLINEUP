@@ -37,5 +37,5 @@
   <% } %>
 </section>
 <% } else if(!user.must_change_password) { %>
-<section class="editor-page recovery-settings" aria-labelledby="recovery-title"><h2 id="recovery-title">Bantuan saat lupa password</h2><p>Untuk sementara, hubungi administrator FleetSync untuk verifikasi identitas dan reset password.</p><% if(user.is_admin) { %><a class="auth-link" href="<%= url('accounts') %>">Reset password pengguna di Kelola Akun</a><% } %></section>
+<section class="editor-page recovery-settings" aria-labelledby="recovery-title"><h2 id="recovery-title">Bantuan saat lupa password</h2><p>Untuk sementara, hubungi administrator DH Line Up untuk verifikasi identitas dan reset password.</p><% if(user.is_admin) { %><a class="auth-link" href="<%= url('accounts') %>">Reset password pengguna di Kelola Akun</a><% } %></section>
 <% } %>

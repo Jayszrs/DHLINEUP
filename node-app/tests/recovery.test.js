@@ -83,7 +83,7 @@ test('short login cooldown and verified email recovery',async t=>{
     });
     await t.test('missing and failing SMTP never activate an unverified email',async()=>{
       assert.equal(new Mailer({}).ready,false);
-      const disabled=request.agent(createApp({db,mailer:new Mailer({})})),form=await disabled.get('/forgot-password');assert.ok(form.text.includes('administrator FleetSync'));assert.ok(!form.text.includes('Kirim kode reset'));assert.equal((await disabled.get('/reset-password')).headers.location,'/forgot-password');const disabledToken=token(await disabled.get('/login'));assert.equal((await disabled.post('/forgot-password').type('form').send({csrf:disabledToken,username:'recovery.owner',email})).status,503);
+      const disabled=request.agent(createApp({db,mailer:new Mailer({})})),form=await disabled.get('/forgot-password');assert.ok(form.text.includes('administrator DH Line Up'));assert.ok(!form.text.includes('Kirim kode reset'));assert.equal((await disabled.get('/reset-password')).headers.location,'/forgot-password');const disabledToken=token(await disabled.get('/login'));assert.equal((await disabled.post('/forgot-password').type('form').send({csrf:disabledToken,username:'recovery.owner',email})).status,503);
       const fresh=request.agent(app),login=await fresh.get('/login');await fresh.post('/login').type('form').send({csrf:token(login),username:'recovery.owner',password:replacement});
       await db.query("DELETE FROM fleetsync.login_attempts WHERE attempt_key LIKE 'email-enroll%'");mail.fail=true;
       const profileToken=token(await fresh.get('/profile'));assert.equal((await fresh.post('/recovery-email-save').type('form').send({csrf:profileToken,email:'replacement@example.test',current_password:replacement})).status,503);

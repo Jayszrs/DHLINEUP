@@ -20,7 +20,7 @@ test('administrator assistance, required password change and profile editing',as
     assert.equal((await login(operator,'operator',operatorPassword)).status,303);assert.equal((await login(secondDevice,'operator',operatorPassword)).status,303);operatorToken=token(await operator.get('/profile'));
     await t.test('only the administrator can access account reset; profile cannot promote an account',async()=>{
       assert.equal((await one(db,'SELECT is_admin FROM fleetsync.users WHERE id=1')).is_admin,true);assert.equal((await one(db,'SELECT is_admin FROM fleetsync.users WHERE id=2')).is_admin,false);
-      const help=await guest.get('/forgot-password');assert.equal(help.status,200);assert.ok(help.text.includes('administrator FleetSync'));assert.ok(!help.text.includes('Kirim kode reset'));
+      const help=await guest.get('/forgot-password');assert.equal(help.status,200);assert.ok(help.text.includes('administrator DH Line Up'));assert.ok(!help.text.includes('Kirim kode reset'));
       assert.equal((await guest.get('/account-reset?id=2')).headers.location,'/login');assert.equal((await operator.get('/account-reset?id=1')).status,403);
       assert.equal((await operator.post('/account-password-reset').type('form').send({csrf:operatorToken,id:1,current_password:operatorPassword,password:temporary,password_confirmation:temporary,is_admin:true})).status,403);
       assert.equal((await operator.post('/profile-save').type('form').send({csrf:operatorToken,name:'Updated Operator',username:'operator.updated',id:1,is_admin:true})).status,303);

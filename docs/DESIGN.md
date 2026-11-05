@@ -1,4 +1,4 @@
-# Arah tampilan DH FleetSync
+# Arah tampilan DH Line Up
 
 - Profil akun menampilkan foto di sebelah identitas pada desktop dan di atas identitas pada ponsel. Nama lengkap, username, NIK, dan site disimpan per akun. Foto memiliki preview, pembesaran, batal pilihan, serta hapus saat menyimpan. Tanpa foto, gunakan inisial. Foto tersimpan menggantikan inisial pada menu akun; mode terang/gelap mengikuti token yang sama. NIK/site yang belum diketahui dibiarkan kosong, tidak diisi dari data Operator.
 

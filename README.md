@@ -1,4 +1,4 @@
-# DH FleetSync
+# DH Line Up
 
 **Versi JavaScript tanpa PHP sudah online di https://dhlineup.vercel.app/**, menggunakan Vercel dan Supabase pada akun `jaelanisurya.akademicrypto@gmail.com`. Source aktif versi baru ada di [node-app](node-app/README.md); panduannya di [deployment Vercel + Supabase](docs/DEPLOY_VERCEL_SUPABASE.md).
 

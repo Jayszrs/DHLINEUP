@@ -1,4 +1,4 @@
-<h1>Buat akun pertama</h1><p class="muted">Database siap. Buat akun Pengelola untuk mulai memakai FleetSync.</p>
+<h1>Buat akun pertama</h1><p class="muted">Database siap. Buat akun Pengelola untuk mulai memakai DH Line Up.</p>
 <form method="post" action="<%= url('setup') %>" class="auth-form"><input type="hidden" name="csrf" value="<%= csrf %>">
 <% if(activationRequired) { %><label>Kode aktivasi hosting<input type="password" name="activation_code" required maxlength="128" autocomplete="off"><small>Gunakan kode aktivasi pemilik hosting.</small></label><% } %>
 <label>Nama pengelola<input name="name" required maxlength="120" autocomplete="name" value="<%= values.name || '' %>"></label>
