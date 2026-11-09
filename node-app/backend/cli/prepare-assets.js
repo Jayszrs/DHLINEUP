@@ -4,6 +4,7 @@ const root=new URL('../../',import.meta.url);
 await mkdir(new URL('public/assets/',root),{recursive:true});
 await mkdir(new URL('frontend/assets/js/vendor/',root),{recursive:true});
 for(const name of ['three.module.js','three.core.js']) await cp(new URL('node_modules/three/build/'+name,root),new URL('frontend/assets/js/vendor/'+name,root));
+await cp(new URL('node_modules/leaflet/dist/',root),new URL('frontend/assets/js/vendor/leaflet/',root),{recursive:true});
 for(const name of ['css','js','fonts','dh-logo.png','dh-symbol.png','dh-symbol.svg','login-mine-hd.png']) await cp(new URL('frontend/assets/'+name,root),new URL('public/assets/'+name,root),{recursive:true});
 const templates={};
 for(const directory of ['','pages/']) for(const name of await readdir(new URL('frontend/views/'+directory,root))) if(name.endsWith('.ejs')) templates[directory+name]=await readFile(new URL('frontend/views/'+directory+name,root),'utf8');

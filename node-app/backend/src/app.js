@@ -32,7 +32,7 @@ const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:10*1024*102
 
 export function createApp({ db:providedDb, storage:providedStorage, mailer:providedMailer, production=Boolean(process.env.VERCEL), activationHash=process.env.BOOTSTRAP_CODE_HASH || '' }={}, app=express()) {
   app.disable('x-powered-by');app.set('trust proxy',production?1:false);app.set('views',path.join(ROOT,'frontend/views'));app.set('view engine','ejs');
-  app.use((req,res,next)=>{res.set({'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin','Cache-Control':'no-store',"Content-Security-Policy":"default-src 'self'; img-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co; style-src 'self' 'unsafe-inline'; script-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});next();});
+  app.use((req,res,next)=>{res.set({'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin','Cache-Control':'no-store',"Content-Security-Policy":"default-src 'self'; img-src 'self' blob: data: https://*.supabase.co https://services.arcgisonline.com https://tile.openstreetmap.org; connect-src 'self' https://*.supabase.co; style-src 'self' 'unsafe-inline'; script-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});next();});
   app.use('/assets',express.static(path.join(ROOT,'frontend/assets'),{dotfiles:'deny',index:false,maxAge:0}));
   app.get('/health',(_req,res)=>res.json({status:'ok',runtime:'node',version:'2.0.0'}));
   app.use(express.urlencoded({extended:false,limit:'100kb'}));app.use(express.json({limit:'100kb'}));

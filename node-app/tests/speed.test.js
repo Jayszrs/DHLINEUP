@@ -21,6 +21,8 @@ test('speed module preserves weighted recaps, GPS archives, permissions and Line
    for(const route of ['/speed-dashboard','/speed-daily','/speed-monthly','/speed-units','/speed-unit?unit=DT2322','/speed-form?unit=DT2322&work_date=2026-10-01']) {const r=await admin.get(route);assert.equal(r.status,200,route+': '+r.text.slice(-200));assert.ok(r.text.includes('Recap Fleet Speed Monitoring'));assert.ok(!r.text.includes('>Dokumentasi</a>'));assert.ok(!r.text.includes('header-import'));}
    const line=await admin.get('/lineup');assert.ok(line.text.includes('href="/import"'));const speed=await admin.get('/speed-dashboard');assert.ok(!speed.text.includes('href="/import"'));assert.ok(speed.text.includes('<details class="nav-group" open>'));assert.equal((await admin.get('/dokumentasi')).headers.location,'/lineup');
    assert.equal((await admin.get('/speed-export?kind=daily')).status,200);
+   const map=await admin.get('/speed-map-data?date=2026-10-23');assert.equal(map.status,200);assert.equal(map.body.status,'missing');assert.deepEqual(map.body.routes,[]);
+   assert.equal((await admin.get('/speed-map-data?date=not-a-date')).status,422);assert.equal((await request(app).get('/speed-map-data?date=2026-10-23')).status,303);
   });
   await t.test('dashboard comparison and recaps follow weighted date filters and empty periods',async()=>{
    const dashboard=await admin.get('/speed-dashboard');assert.equal(dashboard.status,200);assert.ok(dashboard.text.includes('Semua: 19,00 km/jam; bergerak: 38,00 km/jam'));assert.ok(dashboard.text.includes('Rekap harian terbaru'));assert.ok(dashboard.text.includes('Ringkasan bulanan fleet'));assert.ok(dashboard.text.includes('data-comparison-mode="detail"'));

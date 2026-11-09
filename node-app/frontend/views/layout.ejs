@@ -4,6 +4,7 @@
 <script src="<%= asset('js/theme.js') %>"></script><link rel="stylesheet" href="<%= asset('css/app.css') %>"><script src="<%= asset('js/app.js') %>" defer></script>
 <link rel="stylesheet" href="<%= asset('css/dhocc.css') %>">
 <link rel="stylesheet" href="<%= asset('css/monitoring.css') %>">
+<% if(speedPage==='speed-dashboard') { %><link rel="stylesheet" href="<%= asset('js/vendor/leaflet/leaflet.css') %>"><link rel="stylesheet" href="<%= asset('css/fleet-map.css') %>"><script type="module" src="<%= asset('js/fleet-map.js') %>"></script><% } %>
 <% if(page==='dashboard'||speedPage==='speed-dashboard'||occPage==='occ-dashboard') { %><script type="module" src="<%= asset('js/fleet-scene.js') %>"></script><script src="<%= asset('js/fleet-explorer.js') %>" defer></script><% } %>
 <% if(['lineup-form','operator-form'].includes(page)) { %><script src="<%= asset('js/equipment-select.js') %>" defer></script><% } %>
 <% if(speedPage==='speed-dashboard') { %><script src="<%= asset('js/speed-dashboard.js') %>" defer></script><% } %>

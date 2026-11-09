@@ -6,12 +6,12 @@ const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
 const idOf=(item,index)=>String(item.id??item.unit??index);
 
 for(const container of document.querySelectorAll('[data-fleet-scene]')){
- const canvas=container.querySelector('canvas'),viewport=container.querySelector('.fleet-viewport'),labelLayer=container.querySelector('.scene-labels'),pauseButton=container.querySelector('.scene-pause');
+ const canvas=container.querySelector('canvas'),viewport=container.querySelector('.fleet-viewport'),labelLayer=container.querySelector('.scene-labels');
  if(!canvas||!viewport||!labelLayer)continue;
  const fallback=container.querySelector('.scene-fallback'),kind=container.dataset.fleetScene;
  let data;try{data=JSON.parse(container.querySelector('[data-scene-data]')?.textContent||'{}');}catch{if(fallback){fallback.textContent='Data visualisasi belum dapat dibaca. Gunakan daftar detail di bawah.';fallback.hidden=false;}canvas.hidden=true;hideControls();continue;}
  const items=Array.isArray(data.items)?data.items.filter(item=>item&&typeof item==='object'):[];let filteredItems=items;
- function hideControls(){container.dataset.sceneReady='false';for(const button of container.querySelectorAll('button[data-scene-style],[data-scene-reset],[data-scene-page-prev],[data-scene-page-next],.scene-pause'))button.hidden=true;}
+ function hideControls(){container.dataset.sceneReady='false';for(const button of container.querySelectorAll('button[data-scene-style],[data-scene-reset],[data-scene-page-prev],[data-scene-page-next]'))button.hidden=true;}
  let renderer;try{renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,powerPreference:'low-power'});}catch{canvas.hidden=true;hideControls();if(fallback)fallback.hidden=false;continue;}
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6));renderer.setClearColor(0xffffff,0);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;
  const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-20,20,14,-14,.1,150),vector=new THREE.Vector3(),raycaster=new THREE.Raycaster();camera.up.set(0,1,0);
@@ -22,7 +22,7 @@ for(const container of document.querySelectorAll('[data-fleet-scene]')){
  const defaults={yaw:kind==='occ'?.42:.38,pitch:kind==='occ'?.69:.82};
  const prev=container.querySelector('[data-scene-page-prev]'),next=container.querySelector('[data-scene-page-next]'),pageLabel=container.querySelector('[data-scene-page-label]'),reset=container.querySelector('[data-scene-reset]');
  const emptyMessage=viewport.querySelector('.scene-empty')||document.createElement('p');if(!emptyMessage.parentElement){emptyMessage.className='scene-empty';emptyMessage.textContent='Tidak ada unit berdata pada pilihan ini.';emptyMessage.hidden=true;viewport.append(emptyMessage);}
- function syncControls(){const pages=Math.max(1,Math.ceil(filteredItems.length/perPage));if(prev){prev.disabled=page===0;prev.hidden=kind==='occ';}if(next){next.disabled=page>=pages-1;next.hidden=kind==='occ';}if(pageLabel){pageLabel.hidden=kind==='occ';pageLabel.textContent=filteredItems.length?`${page*perPage+1}–${Math.min((page+1)*perPage,filteredItems.length)} dari ${filteredItems.length} ${kind==='speed'?'DT':'penugasan'}`:'Tidak ada data pada tanggal ini';}if(pauseButton){pauseButton.textContent=paused?'Putar animasi':'Jeda animasi';pauseButton.setAttribute('aria-pressed',String(paused));pauseButton.hidden=kind==='occ'||!filteredItems.length;}emptyMessage.hidden=kind==='occ'||filteredItems.length>0;}
+ function syncControls(){const pages=Math.max(1,Math.ceil(filteredItems.length/perPage));if(prev){prev.disabled=page===0;prev.hidden=kind==='occ';}if(next){next.disabled=page>=pages-1;next.hidden=kind==='occ';}if(pageLabel){pageLabel.hidden=kind==='occ';pageLabel.textContent=filteredItems.length?`${page*perPage+1}–${Math.min((page+1)*perPage,filteredItems.length)} dari ${filteredItems.length} ${kind==='speed'?'DT':'penugasan'}`:'Tidak ada data pada tanggal ini';}emptyMessage.hidden=kind==='occ'||filteredItems.length>0;}
  function updateCamera(){const distance=44;camera.position.set(target.x+Math.sin(yaw)*Math.cos(pitch)*distance,target.y+Math.sin(pitch)*distance,target.z+Math.cos(yaw)*Math.cos(pitch)*distance);camera.lookAt(target);const aspect=width/height;camera.left=-halfHeight*aspect/zoom;camera.right=halfHeight*aspect/zoom;camera.top=halfHeight/zoom;camera.bottom=-halfHeight/zoom;camera.updateProjectionMatrix();}
  function projectLabels(){
   const occupied=[];
@@ -49,7 +49,7 @@ for(const container of document.querySelectorAll('[data-fleet-scene]')){
   defaults.yaw=kind==='occ'?.42:perPage===4?.1:.38;defaults.pitch=kind==='occ'?.69:perPage===4?.93:.82;
   if(kind==='occ'){
    content.add(createOccRoom(pixel));halfHeight=width<600?9.7:7.7;targetGoal.set(0,2.1,-.2);target.copy(targetGoal);
-   const positions={camera:[-5.95,4.8,-4.5],audio:[-3.7,1.8,1.5],display:[.3,4.7,-5.6],workstation:[4,2.2,.6],control:[-.3,1.9,-3.8]};const categories=Array.isArray(data.categories)?data.categories:items;
+   const positions={camera:[-5.95,4.8,-4.5],audio:[-3.1,2,-3.1],display:[.3,4.7,-5.6],workstation:[4.5,2.15,2.8],control:[3.14,1.8,-3.7]};const categories=Array.isArray(data.categories)?data.categories:items;
    for(const[i,item]of categories.entries()){const id=idOf(item,i),position=positions[id];if(!position)continue;const label=createLabel(item,id),entry={id,item,label,anchor:new THREE.Vector3(...position)};label.addEventListener('click',()=>select(entry));entries.push(entry);}
   }else{
    const slice=filteredItems.slice(page*perPage,(page+1)*perPage),cols=perPage===4?2:Math.min(4,Math.max(1,slice.length)),rows=Math.max(1,Math.ceil(slice.length/cols));if(slice.length)content.add(createFleetGround(cols,rows,kind));const aspect=width/height,spanX=cols*7.7+2,spanZ=rows*6.9+3,projectedWidth=spanX*Math.cos(defaults.yaw)+spanZ*Math.sin(defaults.yaw);halfHeight=Math.max(6.7,(spanZ*Math.sin(defaults.pitch)+5)/2,projectedWidth/(2*Math.max(.5,aspect)))*1.04;targetGoal.set(0,.8,0);target.copy(targetGoal);
@@ -69,7 +69,7 @@ for(const container of document.querySelectorAll('[data-fleet-scene]')){
  function update(){if(contextLost)return;cancelAnimationFrame(raf);lastFrame=0;syncControls();draw();if(kind!=='occ'&&filteredItems.length&&!paused&&visible&&!document.hidden)raf=requestAnimationFrame(tick);}
  function resetCamera(){targetGoal.set(0,kind==='occ'?2.1:.8,kind==='occ'?-.2:0);target.copy(targetGoal);yaw=defaults.yaw;pitch=defaults.pitch;zoom=zoomGoal=1;draw();}
  function changePage(delta){const pages=Math.max(1,Math.ceil(filteredItems.length/perPage)),nextPage=clamp(page+delta,0,pages-1);if(nextPage===page)return;page=nextPage;rebuild();update();container.dispatchEvent(new CustomEvent('fleet-page',{bubbles:true,detail:{page,pageSize:perPage}}));}
- prev?.addEventListener('click',()=>changePage(-1));next?.addEventListener('click',()=>changePage(1));reset?.addEventListener('click',resetCamera);pauseButton?.addEventListener('click',()=>{paused=!paused;update();});
+ prev?.addEventListener('click',()=>changePage(-1));next?.addEventListener('click',()=>changePage(1));reset?.addEventListener('click',resetCamera);
  container.addEventListener('fleet-filter',event=>{if(kind==='occ')return;const ids=new Set((event.detail?.ids||[]).map(String));filteredItems=items.filter((item,i)=>ids.has(idOf(item,i)));page=0;rebuild();update();});
  container.addEventListener('fleet-focus',event=>{const id=String(event.detail?.id??''),index=filteredItems.findIndex((item,i)=>idOf(item,i)===id);if(kind!=='occ'&&index>=0&&Math.floor(index/perPage)!==page){page=Math.floor(index/perPage);rebuild();}const entry=entries.find(item=>item.id===id);if(!entry)return;select(entry);if(event.detail?.zoom!==false&&entry.model){targetGoal.copy(entry.model.position).add(new THREE.Vector3(0,.8,0));zoomGoal=1.6;if(paused||reduced.matches){target.copy(targetGoal);zoom=zoomGoal;draw();}}});
  for(const control of container.querySelectorAll('button[data-scene-style]'))control.addEventListener('click',()=>{pixel=control.dataset.sceneStyle!=='smooth';container.dataset.sceneStyle=pixel?'pixel':'smooth';for(const other of container.querySelectorAll('button[data-scene-style]'))other.setAttribute('aria-pressed',String(other===control));rebuild();update();});

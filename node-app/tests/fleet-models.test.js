@@ -1,0 +1,5 @@
+import test from'node:test';import assert from'node:assert/strict';import{createOccRoom,createDriver,createTruck}from'../frontend/assets/js/fleet-models.js';
+test('OCC layout keeps the requested four front/four back setups and separate front meeting table',()=>{
+ for(const pixel of[true,false]){const room=createOccRoom(pixel),meta=room.userData;assert.deepEqual(meta.workstationRows,[4,4]);assert.equal(meta.workstationCount,8);assert.equal(meta.workstationPositions.filter(p=>p.row==='front').length,4);assert.equal(meta.workstationPositions.filter(p=>p.row==='back').length,4);assert.equal(meta.meetingTableCount,1);assert.equal(meta.videoWallCount,1);assert.equal(new Set(meta.workstationPositions.map(p=>p.position.join(','))).size,8);}
+});
+test('shared models keep drawable geometry and separately animated truck wheels',()=>{const truck=createTruck(),driver=createDriver(true);assert.equal(truck.userData.wheels.length,4);assert.ok(driver.children.length>0);let meshes=0;truck.traverse(object=>{if(object.isMesh){meshes++;assert.ok(object.geometry.attributes.position.count>0);}});assert.ok(meshes>4);});

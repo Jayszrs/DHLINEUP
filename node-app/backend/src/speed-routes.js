@@ -5,6 +5,7 @@ import {csv} from './spreadsheet.js';
 import {SpeedImporter} from './speed-import.js';
 import {speedPeriods} from './speed-periods.js';
 import {speedFleet} from './fleet-data.js';
+import {loadSpeedMap} from './speed-map.js';
 const labels={'speed-dashboard':'Dashboard Speed','speed-daily':'Rekap Harian','speed-monthly':'Rekap Bulanan','speed-units':'Daftar Unit','speed-unit':'Laporan Speed Unit'};
 export function speedRoutes(app,view,url,upload) {
  const archives=new WeakMap();
@@ -12,6 +13,7 @@ export function speedRoutes(app,view,url,upload) {
  const requireEditor=req=>{if(!canEditData(req.user))throw new HttpError(403,'Akun ini memiliki akses lihat laporan speed. Hubungi administrator untuk perubahan rekap.');};
  const importer=req=>new SpeedImporter(req.db,req.storage,sourceFiles(req.storage),req.user);
  const importView=(req,res,job=null,data={})=>view(req,res,'speed-import',{label:'Impor Speed MDVR',speedPage:'speed-import',job,speedNumber,withAverages,unit:'',...data});
+ app.get('/speed-map-data',async(req,res)=>{try{const day=date(req.query,'date');res.json(await loadSpeedMap(req.db,sourceFiles(req.storage),day));}catch(error){if(error.status)return res.status(error.status).json({error:error.message});console.error('GPS map read failed:',error.code||error.name);return res.status(503).json({error:'Peta GPS belum dapat dimuat. Coba muat ulang halaman.'});}});
  app.get('/speed-import',async(req,res)=>{requireEditor(req);const id=text(req.query,'job',64);return importView(req,res,id?await importer(req).job(id):null);});
  app.get('/speed-import-plan',async(req,res)=>{requireEditor(req);const job=await importer(req).job(text(req.query,'job',64,true));res.attachment('pratinjau-speed.csv').type('text/csv').send(csv([['Unit','Tanggal','Catatan','Bergerak','Jumlah Speed','Speed Tertinggi','Tindakan'],...job.metadata.daily.map(r=>[r.unit,r.work_date,r.total_count,r.moving_count,r.speed_sum,r.max_speed,r.version?'Perbarui':'Tambah'])]));});
  app.post('/speed-import-preview',(req,_res,next)=>{requireEditor(req);next();},upload,async(req,res)=>{

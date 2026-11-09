@@ -1,0 +1,17 @@
+# GPS fleet replay
+
+The speed dashboard now displays a large geographic map instead of parked fleet rows. Satellite imagery comes from the public Esri World Imagery tiled service, with attribution in the map. OpenStreetMap and a plain GPS-track view are alternatives. All application JavaScript and the Leaflet library are served locally. Tile requests carry tile coordinates only; application records, driver identities and raw GPS files are not sent to the imagery service.
+
+The historical replay reads the selected date's original Location, Creation Time and Speed values. Routes are sampled to at most 240 original fixes per DT/day for a bounded response. The truck moves between consecutive retained fixes; the label reports the last sampled GPS speed, not the daily average. A unit report retains the daily weighted average, moving average and maximum. Missing observations, gaps over 900 seconds, equal-time conflicts and implausible jumps split paths and are never joined by a continuous journey.
+
+All globally valid coordinates remain in the private source payload, including distant points. Initial framing focuses on the observed local cluster. The map can pan or focus an individual unit to inspect other recorded positions. Satellite imagery can be newer or older than the selected historical date and is not represented as a historical photograph of that day.
+
+The initial package covers October 1–31, 2026: 5,702,740 available source GPS rows, 23,858 rows with unusable locations, and 867,716 retained map fixes. Legacy single-digit hours and Indonesian formatted speed values are accepted. October 23 has 214 DTs with usable GPS. Earlier dates can have fewer GPS units than recap units because the earlier source archives do not contain every historical reading; this difference is shown as separate counts.
+
+`node backend/cli/build-speed-map.js` builds `.private/speed-map-package`; `--apply` uploads compressed archives to the existing private bucket and writes the `speed_map_index` setting. The builder validates the source checksums, recap values, versions and GPS archive paths against the database. The `/speed-map-data?date=YYYY-MM-DD` endpoint requires the normal application session. It checks a per-date fingerprint and payload digest before returning data. If a later manual edit or GPS import changes that date, the old cached replay is withheld until rebuilt. Source GPS and recaps are never modified by this builder.
+
+The map supports a WIB timeline, replay-rate selection, unit search/selection, route visibility, zoom, framing, scale, and full-screen expansion. It suspends animation offscreen/in a hidden tab and respects reduced motion. The owner explicitly requested removal of pause buttons from all visuals. Camera/zoom and date/report controls remain available.
+
+The OCC model now has exactly four front and four back workstation setups, facing the front video wall, plus a separate front meeting table with six chairs. Geometry is illustrative, following the supplied room photograph and the owner's requested arrangement. Source inventory totals remain unchanged. Driver and truck models add rounded safety helmets, reflective clothing, cab/tire/grille/rail details and shared vertex-colored geometry.
+
+Direction: map-first monitoring with one bounded moving surface. ENERGY 2 / RHYTHM 2 / MOTION 2; neutral application chrome, readable white overlays, orange/gold equipment identity, green movement and amber stopped indicators. No pause control is included per the user's explicit preference.
