@@ -20,7 +20,7 @@ try{
   const changes=manifest.daily.filter(r=>{const old=existing.get(r.unit+':'+r.work_date);if(!old)return true;for(const k of ['total_count','moving_count','speed_sum','max_speed'])if(Number(old[k])!==Number(r[k]))throw new Error('Rekap berbeda sudah tersedia: '+r.unit+' '+r.work_date);return false;});
   // A partial identical recap without its original GPS needs manual review.
   if(changes.length!==manifest.daily.length)throw new Error('Sebagian tanggal sudah tersedia; periksa cakupan sebelum impor.');
-  const report={revision:manifest.revision,files:manifest.files.length,units:units.length,daily:changes.length,readings:changes.reduce((n,r)=>n+r.total_count,0),from:manifest.from,to:manifest.to,apply};
+  const report={revision:manifest.revision,sourceFolder:manifest.source_folder,sourceNotes:manifest.source_notes||[],files:manifest.files.length,units:units.length,daily:changes.length,readings:changes.reduce((n,r)=>n+r.total_count,0),from:manifest.from,to:manifest.to,apply};
   console.log(JSON.stringify(report));
   const files=new SpeedFiles(new Storage());
   for(let start=0;start<changes.length;start+=10){
@@ -47,7 +47,7 @@ try{
     if(JSON.stringify(current)!==JSON.stringify(before))throw new Error('Data berubah saat verifikasi. Ulangi pratinjau.');
     await tx.query('INSERT INTO fleetsync.speed_units(unit) SELECT unnest($1::text[]) ON CONFLICT DO NOTHING',[units]);
     for(let start=0;start<changes.length;start+=200){const payload=JSON.stringify(changes.slice(start,start+200));
-     await tx.query("INSERT INTO fleetsync.speed_daily(unit,work_date,total_count,moving_count,speed_sum,max_speed,source) SELECT unit,work_date,total_count,moving_count,speed_sum,max_speed,$2 FROM jsonb_to_recordset($1::jsonb) AS x(unit text,work_date date,total_count int,moving_count int,speed_sum numeric,max_speed numeric)",[payload,'Drive '+manifest.source_folder]);
+     await tx.query("INSERT INTO fleetsync.speed_daily(unit,work_date,total_count,moving_count,speed_sum,max_speed,source) SELECT unit,work_date,total_count,moving_count,speed_sum,max_speed,$2 FROM jsonb_to_recordset($1::jsonb) AS x(unit text,work_date date,total_count int,moving_count int,speed_sum numeric,max_speed numeric)",[payload,'Drive MDVR 17-31 Okt 2026']);
      await tx.query('INSERT INTO fleetsync.speed_gps_overrides(unit,work_date,object_path,row_count,base_count) SELECT unit,work_date,object_path,total_count,0 FROM jsonb_to_recordset($1::jsonb) AS x(unit text,work_date date,object_path text,total_count int)',[payload]);
     }
     await tx.query('INSERT INTO fleetsync.app_settings(setting_key,setting_value) VALUES($1,$2)',['speed_folder_'+manifest.revision,JSON.stringify(report)]);
