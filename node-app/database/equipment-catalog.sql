@@ -6,5 +6,6 @@ CREATE TABLE IF NOT EXISTS fleetsync.equipment_options (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS equipment_options_unique ON fleetsync.equipment_options(category,lower(value));
+ALTER TABLE fleetsync.equipment_options ADD COLUMN IF NOT EXISTS is_removed boolean NOT NULL DEFAULT false;
 ALTER TABLE fleetsync.equipment_options ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON fleetsync.equipment_options FROM PUBLIC;

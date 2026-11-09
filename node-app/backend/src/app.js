@@ -8,7 +8,7 @@ import { database, initialize, audit, one } from './db.js';
 import { Auth, ROLE, accountVersion, canEditData } from './auth.js';
 import { Mailer } from './mail.js';
 import { Recovery } from './recovery.js';
-import { equipmentOptions, addEquipmentOption, suggestedKind } from './catalog.js';
+import { equipmentOptions, addEquipmentOption, removeEquipmentOption, suggestedKind } from './catalog.js';
 import { speedRoutes } from './speed-routes.js';
 import {lineupFleet} from './fleet-data.js';
 import {occRoutes} from './occ-routes.js';
@@ -44,7 +44,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
   app.use(async(req,res,next)=>{const service=await getServices();Object.assign(req,service);await req.auth.session(req,res);next();});
   const view=async(req,res,page,data={})=>{
     const flash=await req.auth.takeFlash(req);
-    if(['lineup-form','operator-form'].includes(page)) {data.equipmentCatalog=await equipmentOptions(req.db);if(data.row&&!data.row.equipment_kind) data.row.equipment_kind=suggestedKind(data.row.unit);}
+    if(['lineup-form','operator-form'].includes(page)) {data.equipmentCatalog=await equipmentOptions(req.db);if(data.row&&!data.row.equipment_kind){const suggestion=suggestedKind(data.row.unit);const available=data.equipmentCatalog.kind.find(value=>value.toLocaleLowerCase('id-ID')===suggestion.toLocaleLowerCase('id-ID'));if(available)data.row.equipment_kind=available;}}
     const locals={page,label:titles[page],user:req.user,canEditData:canEditData(req.user),csrf:req.session.csrf,flash,errorMessage:'',retryAfter:0,recoverySettings:{},mailReady:req.mail.ready,values:{},row:{},rows:[],filters:{},total:0,accounts:[],title:'',message:'',activationRequired:production,speedPage:'',occPage:'',storageMode:req.storage.client?'signed':'local',url,asset,dateId,status,chipTone,evidenceUrl,avatarUrl,ROLE,accountVersion,...validation,...data};
     const html=ejs.render(templates['layout.ejs'],locals,{filename:'fleetsync/layout.ejs',cache:production,includer(name){
       const key=name.replace(/^(\.\.\/)+/,'').replace(/\.ejs$/,'')+'.ejs';
@@ -58,16 +58,16 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
     const page=req.path.slice(1);
     if(await req.auth.needsSetup()) { if(page!=='setup') return res.redirect(303,url('setup')); }
     else if(page==='setup') return res.redirect(303,url(req.user?'lineup':'login'));
-    if(!req.user&&!['login','setup','forgot-password','reset-password'].includes(page)) { if(['/upload-ticket','/equipment-option'].includes(req.path)) return res.status(401).json({error:'Silakan masuk kembali.'});return res.redirect(303,url('login')); }
+    if(!req.user&&!['login','setup','forgot-password','reset-password'].includes(page)) { if(['/upload-ticket','/equipment-option','/equipment-option-delete'].includes(req.path)) return res.status(401).json({error:'Silakan masuk kembali.'});return res.redirect(303,url('login')); }
     if(req.user&&['login','forgot-password','reset-password'].includes(page)) return res.redirect(303,url('lineup'));
     if(req.user?.must_change_password&&!['profile','password-change','logout','avatar'].includes(page)) {
-      if(['upload-ticket','equipment-option'].includes(page)) return res.status(403).json({error:'Ganti password sementara di Profil sebelum melanjutkan.'});
+      if(['upload-ticket','equipment-option','equipment-option-delete'].includes(page)) return res.status(403).json({error:'Ganti password sementara di Profil sebelum melanjutkan.'});
       return res.redirect(303,url('profile'));
     }
-    const mutation=['lineup-save','lineup-delete','operator-save','operator-delete','import','upload-ticket','equipment-option'].includes(page)&&req.method==='POST';
+    const mutation=['lineup-save','lineup-delete','operator-save','operator-delete','import','upload-ticket','equipment-option','equipment-option-delete'].includes(page)&&req.method==='POST';
     const editor=['lineup-form','import'].includes(page)||(page==='operator-form'&&!req.query.id);
     if(req.user&&!canEditData(req.user)&&((mutation&&!(page==='upload-ticket'&&req.body.kind==='profile_photo'))||editor)) {
-      if(['upload-ticket','equipment-option'].includes(page)) return res.status(403).json({error:'Akun ini hanya memiliki akses lihat data.'});
+      if(['upload-ticket','equipment-option','equipment-option-delete'].includes(page)) return res.status(403).json({error:'Akun ini hanya memiliki akses lihat data.'});
       throw new validation.HttpError(403,'Akun ini hanya dapat melihat dan mengekspor data. Hubungi administrator untuk perubahan Line Up atau Operator.');
     }
     req.repo=new Repository(req.db,req.user?.id);next();
@@ -151,6 +151,10 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
   app.post('/equipment-option',async(req,res)=>{
     req.auth.csrf(req);
     try {res.json({value:await addEquipmentOption(req.db,req.user.id,req.body)});} catch(error) {if(!error.status) throw error;res.status(error.status).json({error:error.message});}
+  });
+  app.post('/equipment-option-delete',async(req,res)=>{
+    req.auth.csrf(req);
+    try {res.json(await removeEquipmentOption(req.db,req.user.id,req.body));} catch(error) {if(!error.status)throw error;res.status(error.status).json({error:error.message});}
   });
   app.post('/upload-ticket',async(req,res)=>{req.auth.csrf(req);const ticket=await req.storage.issue(req.db,req.user,req.body);res.json(ticket);});
   app.get('/avatar',async(req,res)=>{
@@ -273,7 +277,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
     if(!error.status&&!(error instanceof multer.MulterError)) console.error('DHOCC request failed:',error.code||error.name);
     if(res.headersSent) return res.end();
     res.status(status);
-    if(['/upload-ticket','/equipment-option'].includes(req.path)) return res.json({error:message});
+    if(['/upload-ticket','/equipment-option','/equipment-option-delete'].includes(req.path)) return res.json({error:message});
     try { return await view(req,res,'error',{title:'Permintaan belum dapat diproses',message}); }
     catch { return res.type('html').send('<!doctype html><html lang="id"><meta charset="utf-8"><title>DHOCC</title><h1>Layanan belum siap</h1><p>Periksa konfigurasi database dan penyimpanan.</p></html>'); }
   });

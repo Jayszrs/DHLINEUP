@@ -5,8 +5,12 @@ document.querySelectorAll('[data-search-select]').forEach(field => {
   const toggle=field.querySelector('.catalog-toggle'), popup=field.querySelector('.catalog-popup');
   const list=field.querySelector('[role="listbox"]'), empty=field.querySelector('.catalog-empty');
   const add=field.querySelector('[data-catalog-add]'), feedback=field.querySelector('.catalog-feedback');
+  const remove=field.querySelector('[data-catalog-remove]'),confirmation=field.querySelector('[data-catalog-remove-confirm]'),removeYes=field.querySelector('[data-catalog-remove-yes]'),removeCancel=field.querySelector('[data-catalog-remove-cancel]');
   const values=Array.from(fallback.options,option=>option.value);
-  let matches=[], active=-1;
+  const key=value=>value.trim().replace(/\s+/g,' ').toLocaleLowerCase('id-ID');
+  let matches=[], active=-1,pendingRemoval='',removing=false;
+  function syncRemove(){if(remove){remove.hidden=!values.some(value=>key(value)===key(input.value));remove.disabled=removing;}}
+  function cancelRemoval(focus=false){if(removing)return;if(confirmation)confirmation.hidden=true;pendingRemoval='';if(focus)remove?.focus();}
   input.removeAttribute('list'); fallback.remove(); toggle.hidden=false; if(add) add.hidden=false;
   input.setAttribute('role','combobox'); input.setAttribute('aria-autocomplete','list');
   input.setAttribute('aria-controls',list.id); input.setAttribute('aria-expanded','false');
@@ -15,7 +19,7 @@ document.querySelectorAll('[data-search-select]').forEach(field => {
     active=index;
     Array.from(list.children).forEach((option,i)=>{option.setAttribute('aria-selected',String(i===active));if(i===active) {input.setAttribute('aria-activedescendant',option.id);option.scrollIntoView({block:'nearest'});}});
   }
-  function choose(value) {input.value=value;close();input.dispatchEvent(new Event('change',{bubbles:true}));input.focus();close();}
+  function choose(value) {input.value=value;cancelRemoval();syncRemove();close();input.dispatchEvent(new Event('change',{bubbles:true}));input.focus();close();}
   function open(all=false) {
     const search=all?'':input.value.trim().toLocaleLowerCase('id-ID');
     matches=values.filter(value=>value.toLocaleLowerCase('id-ID').includes(search));active=-1;list.replaceChildren();input.removeAttribute('aria-activedescendant');
@@ -23,7 +27,7 @@ document.querySelectorAll('[data-search-select]').forEach(field => {
       option.addEventListener('mousedown',event=>event.preventDefault());option.addEventListener('click',()=>choose(value));list.append(option);});
     empty.hidden=matches.length>0;popup.hidden=false;input.setAttribute('aria-expanded','true');
   }
-  input.addEventListener('focus',()=>open(true)); input.addEventListener('input',()=>{feedback.textContent='';open();});
+  input.addEventListener('focus',()=>open(true)); input.addEventListener('input',()=>{feedback.textContent='';cancelRemoval();syncRemove();open();});input.addEventListener('change',syncRemove);syncRemove();
   toggle.addEventListener('mousedown',event=>event.preventDefault());toggle.addEventListener('click',()=>{if(!popup.hidden) close();else {input.focus();open(true);}});
   input.addEventListener('keydown',event=>{
     if(event.isComposing) return;
@@ -34,6 +38,21 @@ document.querySelectorAll('[data-search-select]').forEach(field => {
   });
   field.addEventListener('focusout',event=>{if(!field.contains(event.relatedTarget)) close();});
   document.addEventListener('pointerdown',event=>{if(!field.contains(event.target)) close();});
+  remove?.addEventListener('click',()=>{const value=values.find(value=>key(value)===key(input.value));if(!value)return;close();pendingRemoval=value;field.querySelector('[data-catalog-remove-name]').textContent=value;confirmation.hidden=false;removeCancel.focus();});
+  removeCancel?.addEventListener('click',()=>cancelRemoval(true));
+  confirmation?.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cancelRemoval(true);}});
+  removeYes?.addEventListener('click',async()=>{
+    if(!pendingRemoval||removing)return;const value=pendingRemoval;removing=true;removeYes.disabled=true;removeCancel.disabled=true;if(add)add.disabled=true;syncRemove();feedback.textContent='Menghapus pilihan...';
+    try{
+      const response=await fetch('/equipment-option-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:input.form.elements.csrf.value,category:field.dataset.category,value})});
+      if(response.redirected)throw new Error('Sesi berakhir. Masuk kembali sebelum menghapus pilihan.');
+      const result=await response.json();if(!response.ok)throw new Error(result.error||'Pilihan belum terhapus. Coba lagi.');
+      for(let i=values.length-1;i>=0;i--)if(key(values[i])===key(result.value))values.splice(i,1);
+      if(key(input.value)===key(result.value)){input.value='';input.dispatchEvent(new Event('change',{bubbles:true}));}
+      confirmation.hidden=true;pendingRemoval='';feedback.textContent='“'+result.value+'” dihapus dari daftar bersama. Catatan lama tetap tersimpan.';input.focus();close();
+    }catch(error){feedback.textContent=error.message||'Koneksi terputus. Coba lagi.';}
+    finally{removing=false;removeYes.disabled=false;removeCancel.disabled=false;if(add)add.disabled=false;syncRemove();}
+  });
   add?.addEventListener('click',async()=>{
     close();const value=input.value.trim().replace(/\s+/g,' ');
     if(!value) {feedback.textContent='Ketik '+field.querySelector('label').textContent.toLowerCase()+' yang ingin ditambahkan.';input.focus();return;}
@@ -44,7 +63,7 @@ document.querySelectorAll('[data-search-select]').forEach(field => {
       const response=await fetch('/equipment-option',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:input.form.elements.csrf.value,category:field.dataset.category,value})});
       if(response.redirected) throw new Error('Sesi berakhir. Masuk kembali sebelum menambahkan pilihan.');
       const result=await response.json();if(!response.ok) throw new Error(result.error||'Pilihan belum tersimpan. Coba lagi.');
-      if(!values.includes(result.value)) values.push(result.value);values.sort((a,b)=>a.localeCompare(b,'id-ID',{numeric:true}));input.value=result.value;feedback.textContent='Pilihan ditambahkan ke daftar bersama.';
+      if(!values.includes(result.value)) values.push(result.value);values.sort((a,b)=>a.localeCompare(b,'id-ID',{numeric:true}));input.value=result.value;cancelRemoval();syncRemove();feedback.textContent='Pilihan ditambahkan ke daftar bersama.';
     } catch(error) {feedback.textContent=error.message||'Koneksi terputus. Coba lagi.';}
     finally {add.disabled=false;}
   });

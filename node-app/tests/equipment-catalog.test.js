@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import request from 'supertest';
 import { database,initialize,one } from '../backend/src/db.js';
 import { createApp } from '../backend/src/app.js';
-import { equipmentOptions } from '../backend/src/catalog.js';
+import { equipmentOptions,removeEquipmentOption } from '../backend/src/catalog.js';
 import { readSpreadsheet,xlsx,HEADERS,exportRows } from '../backend/src/spreadsheet.js';
 const token=r=>r.text.match(/name="csrf" value="([a-f0-9]{64})"/)?.[1];
 
@@ -29,8 +29,27 @@ test('shared equipment catalog preserves old models and separates searchable equ
     const roundtrip=readSpreadsheet(xlsx(exportRows([result])),'xlsx')[0];assert.equal(roundtrip.equipment_kind,'Dump Truck');assert.equal(roundtrip.equipment,'CAT 777');
     const oldHeaders=HEADERS.slice(0,13).map(v=>v==='Tipe Alat'?'Jenis Alat':v);
     const old=readSpreadsheet(xlsx([oldHeaders,['2026-11-04','BCP','','','DT1234','HD785','Fixture','0001']]),'xlsx')[0];assert.equal(old.equipment,'HD785');assert.equal(old.equipment_kind,'');
+    assert.equal((await request(createApp({db})).post('/equipment-option-delete').send({csrf,category:'kind',value:'Dump Truck'})).status,401);
+    assert.equal((await client.post('/equipment-option-delete').send({csrf:'bad',category:'kind',value:'Dump Truck'})).status,419);
+    assert.equal((await client.post('/equipment-option-delete').send({csrf,category:'unit',value:'DT4044'})).status,422);
+    assert.equal((await client.post('/equipment-option-delete').send({csrf,category:'kind',value:'Does not exist'})).status,404);
+    assert.equal((await client.post('/equipment-option-delete').send({csrf,category:'kind',value:'x'.repeat(101)})).status,422);
+    const removed=await client.post('/equipment-option-delete').send({csrf,category:'kind',value:' dump  truck '});assert.equal(removed.status,200);assert.equal(removed.body.value,'Dump Truck');assert.equal(removed.body.removed,true);
+    assert.ok(!(await equipmentOptions(db)).kind.includes('Dump Truck'));
+    assert.equal((await one(db,'SELECT equipment_kind FROM fleetsync.lineups WHERE id=$1',[id])).equipment_kind,'Dump Truck');
+    assert.equal((await one(db,"SELECT equipment_kind FROM fleetsync.operators WHERE nik='QA-007'")).equipment_kind,'Dump Truck');
+    assert.equal((await client.post('/lineup-save').type('form').send({...row,id,version:2})).status,303);
+    assert.ok(!(await equipmentOptions(db)).kind.includes('Dump Truck'),'saving an old assignment must not recreate the removed option');
+    assert.match((await client.get('/lineup-form?id='+id)).text,/name="equipment_kind" value="Dump Truck"/);
+    const again=await client.post('/equipment-option-delete').send({csrf,category:'kind',value:'DUMP TRUCK'});assert.equal(again.status,200);assert.equal(again.body.removed,false);
+    assert.equal(Number((await one(db,"SELECT count(*) AS n FROM fleetsync.audit_logs WHERE action='delete' AND entity_type='equipment-option' AND details->>'value'='Dump Truck'")).n),1);
+    assert.equal((await client.post('/equipment-option').send({csrf,category:'kind',value:'dump truck'})).status,200);assert.ok((await equipmentOptions(db)).kind.includes('Dump Truck'));
+    assert.equal((await client.post('/equipment-option-delete').send({csrf,category:'model',value:'R9200'})).status,200);assert.ok(!(await equipmentOptions(db)).model.includes('R9200'));
+    assert.equal((await one(db,"SELECT equipment FROM fleetsync.operators WHERE nik='QA-catalog'")).equipment,'R9200');
+    await assert.rejects(removeEquipmentOption(db,999999,{category:'kind',value:'Excavator'}));assert.ok((await equipmentOptions(db)).kind.includes('Excavator'),'failed audit rolls back the removal');
     await db.query('UPDATE fleetsync.users SET is_admin=false,can_edit_data=false');
     assert.equal((await client.post('/equipment-option').send({csrf,category:'kind',value:'Forbidden'})).status,403);
     assert.equal(Number((await one(db,"SELECT count(*) AS n FROM fleetsync.equipment_options WHERE value='Forbidden'")).n),0);
+    assert.equal((await client.post('/equipment-option-delete').send({csrf,category:'kind',value:'Excavator'})).status,403);assert.ok((await equipmentOptions(db)).kind.includes('Excavator'));
   } finally {await db.close();}
 });
