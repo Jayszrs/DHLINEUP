@@ -10,7 +10,8 @@ const filename=path.resolve(process.argv[2]||'.private/october-package/manifest.
 const manifest=JSON.parse(await readFile(filename,'utf8')),apply=process.argv.includes('--apply');
 if(!manifest.provider_checksums_verified||manifest.errors?.length||manifest.from!=='2026-10-17'||manifest.to!=='2026-10-31'||!/^[a-f0-9]{64}$/.test(manifest.revision))throw new Error('Manifest sumber belum terverifikasi.');
 if(!manifest.daily?.length||manifest.daily.some(r=>!/^DT\d+$/.test(r.unit)||r.work_date<manifest.from||r.work_date>manifest.to))throw new Error('Cakupan sumber tidak valid.');
-const units=[...new Set(manifest.daily.map(r=>r.unit))].sort(),db=await database();
+const emptyUnits=manifest.files.filter(r=>r.rows===0&&/^DT\d+\.xlsx$/i.test(r.file)).map(r=>r.file.slice(0,-5).toUpperCase());
+const units=[...new Set([...manifest.daily.map(r=>r.unit),...emptyUnits])].sort(),db=await database();
 try{
  const source=await one(db,"SELECT setting_value FROM fleetsync.app_settings WHERE setting_key=$1",['speed_folder_'+manifest.revision]);
  if(source){console.log(JSON.stringify({already:true,revision:manifest.revision}));}
@@ -22,7 +23,10 @@ try{
   if(changes.length!==manifest.daily.length)throw new Error('Sebagian tanggal sudah tersedia; periksa cakupan sebelum impor.');
   const report={revision:manifest.revision,sourceFolder:manifest.source_folder,sourceNotes:manifest.source_notes||[],files:manifest.files.length,units:units.length,daily:changes.length,readings:changes.reduce((n,r)=>n+r.total_count,0),from:manifest.from,to:manifest.to,apply};
   console.log(JSON.stringify(report));
-  const files=new SpeedFiles(new Storage());
+  const storage=new Storage(),files=new SpeedFiles(storage),remote=new Map();let verifiedRemote=0;
+  if(apply&&storage.client){
+   for(let offset=0;;offset+=1000){const {data,error}=await storage.client.storage.from(storage.bucket).list('speed/'+manifest.revision,{limit:1000,offset,sortBy:{column:'name',order:'asc'}});if(error)throw new Error('Metadata arsip belum dapat dibaca.');for(const item of data)remote.set(item.name,item.metadata);if(data.length<1000)break;}
+  }
   for(let start=0;start<changes.length;start+=10){
    await Promise.all(changes.slice(start,start+10).map(async(day,index)=>{
     if(!/^DT\d+-2026-10-\d{2}\.json\.gz$/.test(day.file))throw new Error('Nama arsip sumber tidak valid.');
@@ -34,7 +38,11 @@ try{
     for(const row of chunk.rows.slice(1)){const speed=Number(row[speedIndex]);if(!Number.isFinite(speed)||speed<0||speed>500||row[1]!==day.unit||row[5].slice(0,10)!==day.work_date)throw new Error('GPS di luar cakupan rekap.');moving+=speed>0?1:0;sum+=speed;max=Math.max(max,speed);}
     if(moving!==day.moving_count||Math.abs(sum-Number(day.speed_sum))>.0001||max!==Number(day.max_speed))throw new Error('Angka rekap tidak cocok dengan seluruh GPS asli.');
     day.object_path=`speed/${manifest.revision}/${start+index}.json.gz`;
-    if(apply)await files.put(day.object_path,bytes);
+    if(apply){
+     const old=remote.get((start+index)+'.json.gz'),digest=createHash('md5').update(bytes).digest('hex');
+     if(Number(old?.size)===bytes.length&&String(old?.eTag||'').replaceAll('"','')===digest)verifiedRemote++;
+     else for(let attempt=0;;attempt++){try{await files.put(day.object_path,bytes);break;}catch(error){if(attempt>=3)throw error;await new Promise(resolve=>setTimeout(resolve,500*2**attempt));}}
+    }
    }));
    if(start%200===0)console.log(JSON.stringify({verifiedDaily:Math.min(start+10,changes.length),total:changes.length}));
   }
@@ -58,7 +66,7 @@ try{
    const totals=await one(db,'SELECT count(*)::int AS daily,sum(total_count)::bigint AS readings,sum(moving_count)::bigint AS moving,sum(speed_sum)::numeric AS speed_sum,max(max_speed)::numeric AS max_speed FROM fleetsync.speed_daily WHERE work_date BETWEEN $1 AND $2',[manifest.from,manifest.to]);
    for(const key of ['readings','moving','speed_sum']){const expected=changes.reduce((n,r)=>n+Number(r[{readings:'total_count',moving:'moving_count',speed_sum:'speed_sum'}[key]]),0);if(Math.abs(Number(totals[key])-expected)>.001)throw new Error('Total impor tidak cocok: '+key);}
    await writeFile(path.resolve('.private/dhocc-speed-import-result.json'),JSON.stringify({...report,totals,previousRowsPreserved:before.length,backup},null,2));
-   console.log(JSON.stringify({imported:true,...totals,previousRowsPreserved:before.length}));
+   console.log(JSON.stringify({imported:true,...totals,previousRowsPreserved:before.length,verifiedRemoteObjects:verifiedRemote}));
   }
  }
 }finally{await db.close();}
