@@ -1,0 +1,5 @@
+<section class="fleet-scene" data-fleet-scene="<%= sceneKind %>" data-pace="<%= pace %>">
+ <div class="fleet-scene-copy"><h3><%= sceneTitle %></h3><p><%= sceneDescription %></p><strong class="scene-value"><%= sceneValue %></strong><span class="scene-value-label"><%= sceneValueLabel %></span><small>Visualisasi ilustratif berdasarkan rekap, bukan posisi GPS langsung.</small></div>
+ <div class="fleet-viewport"><canvas aria-label="<%= sceneKind==='speed'?'Animasi 3D dump truck di lintasan tambang':'Karakter 3D operator tambang dengan helm keselamatan' %>" role="img"></canvas><p class="scene-fallback" hidden>Visualisasi 3D tidak tersedia di perangkat ini. Angka monitoring tetap tersedia.</p></div>
+ <button class="scene-pause subtle-button" type="button" hidden aria-pressed="false">Jeda animasi</button>
+</section>

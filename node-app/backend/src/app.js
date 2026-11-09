@@ -18,7 +18,7 @@ import { HEADERS,readSpreadsheet,exportRows,xlsx,csv } from './spreadsheet.js';
 const ROOT=fileURLToPath(new URL('../../',import.meta.url));
 const pages=['lineup','dashboard','detail','lineup-form','master','operator-form','import','audit','profile','accounts','account-reset','account-edit'];
 const actions=['lineup-save','lineup-delete','operator-save','operator-delete','profile-save','account-create','logout','import'];
-const titles={'lineup':'DH Line Up',dashboard:'Dashboard',detail:'Detail Unit','lineup-form':'Form Line Up',master:'Operator','operator-form':'Form Operator',dokumentasi:'Dokumentasi',import:'Impor Data',audit:'Riwayat Perubahan',profile:'Profil Saya',accounts:'Kelola Akun','account-reset':'Reset Password Akun','account-edit':'Edit Profil & Role',login:'Login',setup:'Buat Akun Pertama','forgot-password':'Lupa Password','reset-password':'Password Baru',error:'Kesalahan'};
+const titles={'lineup':'DHOCC',dashboard:'Dashboard',detail:'Detail Unit','lineup-form':'Form Line Up',master:'Operator','operator-form':'Form Operator',dokumentasi:'Dokumentasi',import:'Impor Data',audit:'Riwayat Perubahan',profile:'Profil Saya',accounts:'Kelola Akun','account-reset':'Reset Password Akun','account-edit':'Edit Profil & Role',login:'Login',setup:'Buat Akun Pertama','forgot-password':'Lupa Password','reset-password':'Password Baru',error:'Kesalahan'};
 const url=(page='lineup',params={})=>'/'+page+(Object.keys(params).length?'?'+new URLSearchParams(Object.entries(params).filter(([,v])=>v!==undefined&&v!==null)).toString():'');
 const asset=name=>'/assets/'+name;
 const dateId=(value,short=false)=>value?new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:short?'short':'long',...(short?{}:{year:'numeric'}),timeZone:'Asia/Jakarta'}).format(new Date(String(value).slice(0,10)+'T00:00:00Z')):'-';
@@ -168,7 +168,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
   app.get('/export',async(req,res)=>{
     const filters=validation.filters(req.query),kind=validation.choice(req.query,'kind',['lineup','master','template'],'lineup'),format=validation.choice(req.query,'format',['xlsx','csv'],'xlsx');
     const rows=kind==='template'?[HEADERS]:exportRows(kind==='master'?await req.repo.operators(filters):await req.repo.lineups(filters),kind);
-    res.attachment(`DH_Line_Up_${kind}.${format}`).type(format==='csv'?'text/csv; charset=utf-8':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(format==='csv'?csv(rows):xlsx(rows));
+    res.attachment(`DHOCC_${kind}.${format}`).type(format==='csv'?'text/csv; charset=utf-8':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(format==='csv'?csv(rows):xlsx(rows));
   });
   app.get('/dokumentasi',(_req,res)=>res.redirect(303,url('lineup')));
   speedRoutes(app,view,url,upload);
@@ -263,12 +263,12 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
   app.use((req,_res,next)=>next(new validation.HttpError(actions.includes(req.path.slice(1))?405:404,actions.includes(req.path.slice(1))?'Aksi ini harus dikirim melalui formulir.':'Halaman tidak ditemukan.')));
   app.use(async(error,req,res,_next)=>{
     const status=error instanceof multer.MulterError?422:(error.status||503),message=error instanceof multer.MulterError?'Unggahan melebihi batas atau berisi kolom file yang tidak dikenal.':error.status?error.message:'Layanan belum siap. Periksa konfigurasi database dan penyimpanan.';
-    if(!error.status&&!(error instanceof multer.MulterError)) console.error('DH Line Up request failed:',error.code||error.name);
+    if(!error.status&&!(error instanceof multer.MulterError)) console.error('DHOCC request failed:',error.code||error.name);
     if(res.headersSent) return res.end();
     res.status(status);
     if(['/upload-ticket','/equipment-option'].includes(req.path)) return res.json({error:message});
     try { return await view(req,res,'error',{title:'Permintaan belum dapat diproses',message}); }
-    catch { return res.type('html').send('<!doctype html><html lang="id"><meta charset="utf-8"><title>DH Line Up</title><h1>Layanan belum siap</h1><p>Periksa konfigurasi database dan penyimpanan.</p></html>'); }
+    catch { return res.type('html').send('<!doctype html><html lang="id"><meta charset="utf-8"><title>DHOCC</title><h1>Layanan belum siap</h1><p>Periksa konfigurasi database dan penyimpanan.</p></html>'); }
   });
   return app;
 }

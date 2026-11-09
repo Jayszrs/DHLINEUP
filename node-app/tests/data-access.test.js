@@ -40,10 +40,10 @@ test('three approved accounts have data CRUD; other accounts retain read access'
    assert.equal((await agent.get('/export?kind=master')).status,200);
   });
   await t.test('logo has transparent pixels and favicon uses symbol without letters',async()=>{
-   const bytes=await readFile(new URL('../frontend/assets/dh-symbol.png',import.meta.url)),metadata=await sharp(bytes).metadata(),stats=await sharp(bytes).stats();
-   assert.ok(metadata.hasAlpha);assert.ok(metadata.width>=1024);assert.equal(stats.channels[3].min,0);
-   const html=await request(app).get('/login');assert.ok(html.text.includes('type="image/png" href="/assets/dh-symbol.png"'));assert.ok(html.text.includes('class="brand-wordmark">DH</span>'));
-   assert.equal((await request(app).get('/assets/dh-symbol.png')).status,200);
+   const bytes=await sharp(await readFile(new URL('../frontend/assets/dh-symbol.svg',import.meta.url))).resize(1024,1024).png().toBuffer(),metadata=await sharp(bytes).metadata(),stats=await sharp(bytes).stats();
+   assert.ok(metadata.hasAlpha);assert.equal(metadata.width,1024);assert.equal(stats.channels[3].min,0);
+   const html=await request(app).get('/login');assert.ok(html.text.includes('type="image/svg+xml" href="/assets/dh-symbol.svg"'));assert.ok(html.text.includes('class="brand-wordmark">DHOCC</span>'));
+   assert.equal((await request(app).get('/assets/dh-symbol.svg')).status,200);
   });
  } finally {await db.close();}
 });

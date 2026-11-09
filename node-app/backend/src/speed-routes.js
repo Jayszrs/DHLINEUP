@@ -3,6 +3,7 @@ import {canEditData} from './auth.js';
 import {HttpError,text,date} from './validation.js';
 import {csv} from './spreadsheet.js';
 import {SpeedImporter} from './speed-import.js';
+import {speedPeriods} from './speed-periods.js';
 const labels={'speed-dashboard':'Dashboard Speed','speed-daily':'Rekap Harian','speed-monthly':'Rekap Bulanan','speed-units':'Daftar Unit','speed-unit':'Laporan Speed Unit'};
 export function speedRoutes(app,view,url,upload) {
  const archives=new WeakMap();
@@ -32,6 +33,7 @@ export function speedRoutes(app,view,url,upload) {
   const repo=new SpeedRepository(req.db,req.user.id),filters=speedFilters(req.query),data={speedPage:page,label:labels[page],speedFilters:filters,speedNumber};
   if(page==='speed-unit'){filters.unit=speedUnit(req.query,true);data.speedUnit=await repo.unit(filters.unit);const rawPage=Number(text(req.query,'raw_page',8)||1);if(!Number.isSafeInteger(rawPage)||rawPage<1)throw new HttpError(422,'Halaman GPS tidak valid.');data.tab=text(req.query,'tab',10)==='gps'?'gps':'recap';data.gps=data.tab==='gps'?await repo.records(filters.unit,filters,sourceFiles(req.storage),rawPage):{total:data.speedUnit.raw_count,rows:[],headers:[],page:1,pages:1};data.label='Speed '+filters.unit;}
   [data.speedSummary,data.speedDaily,data.speedUnits]=await Promise.all([repo.summary(filters),repo.daily(filters),repo.units(filters)]);
+  if(page==='speed-dashboard')data.speedPeriods=speedPeriods(data.speedDaily);
   if(['speed-dashboard','speed-monthly'].includes(page))data.speedMonthly=await repo.monthly(filters);
   return view(req,res,'speed',data);
  });
@@ -41,5 +43,5 @@ export function speedRoutes(app,view,url,upload) {
   try{const unit=await repo[action==='speed-save'?'save':'delete'](req.body);await req.auth.flash(req,action==='speed-save'?'Rekap speed berhasil disimpan.':'Rekap speed berhasil dihapus.');res.redirect(303,url('speed-unit',{unit}));}
   catch(error){if(!error.status)throw error;res.status(error.status);return view(req,res,'speed-form',{label:'Periksa Rekap Speed',speedPage:'speed-form',speedUnits:await repo.units(),row:Object.fromEntries(['unit','work_date','version','total_count','moving_count','speed_sum','max_speed'].map(k=>[k,typeof req.body[k]==='string'?req.body[k]:''])),errorMessage:error.message});}
  });
- app.get('/speed-export',async(req,res)=>{const repo=new SpeedRepository(req.db,req.user.id),filters=speedFilters(req.query),kind=text(req.query,'kind',20)||'daily';let rows,first;if(kind==='units'){rows=await repo.units(filters);first='Unit';}else if(kind==='monthly'){rows=await repo.monthly(filters);first='Bulan';}else{rows=await repo.daily(filters);first='Tanggal';}const output=[[first,'Catatan','Bergerak','Berhenti (0)','Jumlah Speed','Rata-rata Semua','Rata-rata Bergerak','Speed Tertinggi','% Bergerak'],...rows.map(r=>[r.unit||r.month||r.work_date,r.total_count,r.moving_count,r.stopped_count,r.speed_sum,r.average??'',r.moving_average??'',r.max_speed??'',r.moving_ratio??''])];res.attachment('DH_Line_Up_Speed_'+kind+'.csv').type('text/csv; charset=utf-8').send(csv(output));});
+ app.get('/speed-export',async(req,res)=>{const repo=new SpeedRepository(req.db,req.user.id),filters=speedFilters(req.query),kind=text(req.query,'kind',20)||'daily';let rows,first;if(kind==='units'){rows=await repo.units(filters);first='Unit';}else if(kind==='monthly'){rows=await repo.monthly(filters);first='Bulan';}else{rows=await repo.daily(filters);first='Tanggal';}const output=[[first,'Catatan','Bergerak','Berhenti (0)','Jumlah Speed','Rata-rata Semua','Rata-rata Bergerak','Speed Tertinggi','% Bergerak'],...rows.map(r=>[r.unit||r.month||r.work_date,r.total_count,r.moving_count,r.stopped_count,r.speed_sum,r.average??'',r.moving_average??'',r.max_speed??'',r.moving_ratio??''])];res.attachment('DHOCC_Speed_'+kind+'.csv').type('text/csv; charset=utf-8').send(csv(output));});
 }

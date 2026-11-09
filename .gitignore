@@ -18,4 +18,5 @@ node-app/.env
 node-app/.env.*
 node-app/frontend/views.generated.js
 node-app/public/assets/
+node-app/frontend/assets/js/vendor/
 !node-app/.env.example

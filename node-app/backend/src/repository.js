@@ -26,7 +26,7 @@ export class Repository {
       last_date=greatest(fleetsync.operators.last_date,excluded.last_date),version=fleetsync.operators.version+1,updated_at=now()`, [row.site,row.nik,row.operator_name,row.unit,row.equipment,row.equipment_kind||'',row.work_date]);
   }
   async insert(db, row, id = `js-${randomBytes(12).toString('hex')}`, { skipDuplicate = false } = {}) {
-    const cols = [...fields,'source','source_row']; row = { equipment_kind:'',proof_ftw:'',proof_mine:'',source:'Input DH Line Up',source_row:null,...row };
+    const cols = [...fields,'source','source_row']; row = { equipment_kind:'',proof_ftw:'',proof_mine:'',source:'Input DHOCC',source_row:null,...row };
     const result = await db.query(`INSERT INTO fleetsync.lineups(id,${cols.join(',')}) VALUES(${Array.from({length:cols.length+1},(_,i)=>`$${i+1}`).join(',')}) ${skipDuplicate ? 'ON CONFLICT DO NOTHING' : ''} RETURNING id`, [id,...cols.map(k=>row[k])]);
     if (!result.rows.length) return null;
     await rememberEquipment(db,row); await this.syncOperator(db,row); await audit(db,this.actor,'create','lineup',id,{unit:row.unit,date:row.work_date}); return id;

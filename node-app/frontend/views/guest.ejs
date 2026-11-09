@@ -1,14 +1,14 @@
 <% const split=['login','forgot-password','reset-password'].includes(page); %>
 <main id="main-content" class="<%= split?'login-shell':'guest-shell' %>">
 <% if(split) { %>
-  <aside class="login-visual" aria-label="DH Line Up">
+  <aside class="login-visual" aria-label="DHOCC">
     <img class="login-photo" src="<%= asset('login-mine-hd.png') %>" alt="" fetchpriority="high" decoding="async">
     <div class="login-visual-shade" aria-hidden="true"></div>
-    <div class="login-brand"><span class="brand-signature"><img src="<%= asset('dh-symbol.png') %>" alt="" width="48" height="48"><span class="brand-wordmark">DH</span></span><span class="brand-caption">Line Up</span></div>
+    <div class="login-brand"><span class="brand-signature"><img src="<%= asset('dh-symbol.svg') %>" alt="" width="48" height="48"><span class="brand-wordmark">DHOCC</span></span><span class="brand-caption">Monitoring Operasional</span></div>
     <div class="login-visual-copy"><h2>Penugasan operator<br>dan pengecekan harian.</h2><p>Kelola Line Up, Mine Dispatch, dan bukti FTW untuk operasional site.</p></div>
-    <p class="login-visual-footer">DH Line Up</p>
+    <p class="login-visual-footer">DHOCC</p>
   </aside>
-<% } else { %><div class="guest-brand" aria-label="DH Line Up"><span class="brand-signature"><img src="<%= asset('dh-symbol.png') %>" alt="" width="56" height="56"><span class="brand-wordmark">DH</span></span><span class="brand-caption">Line Up</span></div><% } %>
+<% } else { %><div class="guest-brand" aria-label="DHOCC"><span class="brand-signature"><img src="<%= asset('dh-symbol.svg') %>" alt="" width="56" height="56"><span class="brand-wordmark">DHOCC</span></span><span class="brand-caption">Monitoring Operasional</span></div><% } %>
   <section class="guest-panel <%= split?'login-panel':'' %>"><div class="<%= split?'login-form-area':'' %>">
     <% if(flash) { %><div class="alert <%= flash.type %>" role="status"><%= flash.message %></div><% } %>
     <% if(errorMessage) { %><div class="alert error" role="alert"><%= errorMessage %><% if(retryAfter) { %><p data-retry-after="<%= retryAfter %>" aria-live="off">Bisa dicoba lagi dalam <span data-retry-count><%= retryAfter %></span> detik.</p><% } %></div><% } %>
