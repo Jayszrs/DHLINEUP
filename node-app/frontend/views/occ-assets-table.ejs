@@ -1,0 +1,14 @@
+<div class="table-outer occ-assets-table"><div class="table-scroll"><table class="data-table">
+ <caption class="sr-only">Master inventory OCC Jakarta Head Office</caption>
+ <thead><tr><th scope="col">Inventory / aset</th><th scope="col">Kode setup</th><th scope="col">Qty</th><th scope="col">Brand / model</th><th scope="col">Penempatan</th><th scope="col">Kondisi</th><th scope="col">Dokumentasi</th><% if(canEditData){ %><th scope="col">Aksi</th><% } %></tr></thead>
+ <tbody><% for(const item of occAssets){const photoUrl=/^https?:\/\//i.test(item.photo_url||'')?item.photo_url:''; %><tr id="asset-<%= item.id %>">
+  <td><strong class="operator-name"><%= item.name %></strong><small><%= item.category %></small><% if(item.specifications||item.related_device||item.notes){ %><details class="occ-asset-detail"><summary>Spesifikasi &amp; catatan</summary><dl><% for(const [key,title]of [['specifications','Spesifikasi'],['related_device','Perangkat terkait'],['notes','Catatan']]){if(item[key]){ %><div><dt><%= title %></dt><dd><%= item[key] %></dd></div><% }} %></dl></details><% } %></td>
+  <td><span class="unit-label"><%= item.asset_code||'-' %></span></td>
+  <td class="occ-qty"><%= item.qty===null||item.qty===undefined?'Belum diketahui':item.qty %></td>
+  <td><strong><%= item.brand||'Belum terdata' %></strong><small><%= item.model||'Belum terdata' %></small></td>
+  <td><%= item.placement||'Belum terdata' %></td>
+  <td><span class="chip <%= occStatusTone(item.availability) %>"><%= item.availability||'To Check' %></span><small><%= item.condition||'To Check' %></small></td>
+  <td><% if(photoUrl){ %><a class="table-action" href="<%= photoUrl %>" target="_blank" rel="noopener noreferrer" aria-label="Dokumentasi <%= item.name %> <%= item.asset_code||'' %>">Lihat dokumentasi</a><% }else{ %><span class="muted">Belum ada tautan</span><% } %></td>
+  <% if(canEditData){ %><td><a class="subtle-button small" href="<%= url('occ-form',{kind:'asset',id:item.id}) %>" aria-label="Edit <%= item.name %> <%= item.asset_code||'' %>">Edit</a></td><% } %>
+ </tr><% } %></tbody>
+</table><% if(!occAssets.length){ %><div class="empty-state"><h3>Inventory tidak ditemukan</h3><p>Ubah kata pencarian atau tambahkan inventory baru jika belum terdata.</p></div><% } %></div></div>

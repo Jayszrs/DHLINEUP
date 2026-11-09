@@ -1,0 +1,10 @@
+for(const container of document.querySelectorAll('.fleet-explorer')){
+ const records=[...container.querySelectorAll('[data-scene-focus]')],search=container.querySelector('[data-scene-search]'),detail=container.querySelector('[data-scene-detail]');
+ container.addEventListener('click',event=>{const record=event.target.closest('[data-scene-focus]');if(!record||container.dataset.sceneReady!=='true'||event.metaKey||event.ctrlKey||event.shiftKey)return;event.preventDefault();container.dispatchEvent(new CustomEvent('fleet-focus',{detail:{id:record.dataset.sceneFocus}}));});
+ container.addEventListener('fleet-select',event=>{const selected=records.find(r=>r.dataset.sceneFocus===String(event.detail.id));for(const record of records){record.classList.toggle('is-selected',record===selected);if(record===selected)record.setAttribute('aria-current','true');else record.removeAttribute('aria-current');}if(selected){detail.href=selected.href;const list=container.querySelector('.scene-records'),top=selected.offsetTop-list.offsetTop;if(top<list.scrollTop||top+selected.offsetHeight>list.scrollTop+list.clientHeight)list.scrollTop=top;}});
+ search?.addEventListener('input',()=>{const query=search.value.trim().toLocaleLowerCase('id-ID'),ids=[];for(const record of records){record.hidden=!record.textContent.toLocaleLowerCase('id-ID').includes(query);if(!record.hidden)ids.push(record.dataset.sceneFocus);}container.querySelector('.scene-search-empty').hidden=ids.length>0;container.dispatchEvent(new CustomEvent('fleet-filter',{detail:{ids}}));});
+}
+for(const room of document.querySelectorAll('.occ-room-scene')){
+ const links=[...room.querySelectorAll('[data-occ-category]')],detail=room.querySelector('[data-occ-detail]');
+ room.addEventListener('fleet-select',event=>{const selected=links.find(a=>a.dataset.occCategory===String(event.detail.id));for(const link of links){link.classList.toggle('is-selected',link===selected);if(link===selected)link.setAttribute('aria-current','true');else link.removeAttribute('aria-current');}if(selected&&detail){detail.href=selected.href;detail.textContent='Buka '+selected.querySelector('span').firstChild.textContent.trim();}});
+}

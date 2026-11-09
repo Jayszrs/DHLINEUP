@@ -4,6 +4,7 @@ import {HttpError,text,date} from './validation.js';
 import {csv} from './spreadsheet.js';
 import {SpeedImporter} from './speed-import.js';
 import {speedPeriods} from './speed-periods.js';
+import {speedFleet} from './fleet-data.js';
 const labels={'speed-dashboard':'Dashboard Speed','speed-daily':'Rekap Harian','speed-monthly':'Rekap Bulanan','speed-units':'Daftar Unit','speed-unit':'Laporan Speed Unit'};
 export function speedRoutes(app,view,url,upload) {
  const archives=new WeakMap();
@@ -33,7 +34,12 @@ export function speedRoutes(app,view,url,upload) {
   const repo=new SpeedRepository(req.db,req.user.id),filters=speedFilters(req.query),data={speedPage:page,label:labels[page],speedFilters:filters,speedNumber};
   if(page==='speed-unit'){filters.unit=speedUnit(req.query,true);data.speedUnit=await repo.unit(filters.unit);const rawPage=Number(text(req.query,'raw_page',8)||1);if(!Number.isSafeInteger(rawPage)||rawPage<1)throw new HttpError(422,'Halaman GPS tidak valid.');data.tab=text(req.query,'tab',10)==='gps'?'gps':'recap';data.gps=data.tab==='gps'?await repo.records(filters.unit,filters,sourceFiles(req.storage),rawPage):{total:data.speedUnit.raw_count,rows:[],headers:[],page:1,pages:1};data.label='Speed '+filters.unit;}
   [data.speedSummary,data.speedDaily,data.speedUnits]=await Promise.all([repo.summary(filters),repo.daily(filters),repo.units(filters)]);
-  if(page==='speed-dashboard')data.speedPeriods=speedPeriods(data.speedDaily);
+  if(page==='speed-dashboard'){
+   data.speedPeriods=speedPeriods(data.speedDaily);
+   data.speedSceneDate=date(req.query,'scene_date',false)||data.speedDaily.at(-1)?.work_date||new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
+   const inRange=(!filters.from||data.speedSceneDate>=filters.from)&&(!filters.to||data.speedSceneDate<=filters.to);
+   data.speedSceneData=speedFleet(inRange?await repo.units({...filters,from:data.speedSceneDate,to:data.speedSceneDate}):[],data.speedSceneDate,url);
+  }
   if(['speed-dashboard','speed-monthly'].includes(page))data.speedMonthly=await repo.monthly(filters);
   return view(req,res,'speed',data);
  });

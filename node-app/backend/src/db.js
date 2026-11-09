@@ -47,6 +47,7 @@ export async function initialize(db) {
   await db.exec(await readFile(new URL('../../database/equipment-catalog.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../../database/user-profile.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../../database/speed.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../../database/occ.sql',import.meta.url),'utf8'));
 }
 
 export async function one(db, sql, values = []) { return (await db.query(sql, values)).rows[0]; }

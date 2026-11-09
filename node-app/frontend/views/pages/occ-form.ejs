@@ -1,0 +1,56 @@
+<%
+ const assetForm=occKind==='asset';
+ const destination=assetForm?'occ-assets':occKind==='cctv'?'occ-cctv':'occ-availability';
+ const dateLabel=row.work_date?dateId(row.work_date):'';
+ const itemKeys=occKind==='cctv'?OCC_CCTV_SITES:OCC_ITEMS;
+ const statusChoices=occKind==='cctv'?occCctvStatuses:occStatuses;
+ const groups=occKind==='cctv'?[{title:'CCTV per site',keys:itemKeys}]:[
+  {title:'Table microphone',keys:OCC_ITEMS.slice(0,10)},
+  {title:'Handheld microphone',keys:OCC_ITEMS.slice(10,14)},
+  {title:'Perangkat pendukung',keys:OCC_ITEMS.slice(14)}
+ ];
+%>
+<section class="editor-page occ-editor-page">
+ <div class="page-title"><div><h1><%= label %></h1><p><%= assetForm?'Identitas, kondisi, dan dokumentasi perangkat OCC Jakarta Head Office.':'Catat hasil pengecekan setiap perangkat sesuai kondisi pada tanggal pilihan.' %></p></div><a class="subtle-button" href="<%= url(destination) %>">Kembali ke <%= assetForm?'inventory':'rekap' %></a></div>
+ <% if(!assetForm){ %>
+ <form class="occ-date-jump speed-filters" method="get" action="<%= url('occ-form') %>"><input type="hidden" name="kind" value="<%= occKind %>"><label>Pilih tanggal pengecekan<input type="date" name="work_date" min="1900-01-01" value="<%= row.work_date %>" required></label><button class="subtle-button" type="submit">Buka tanggal</button><span class="muted">Catatan tersimpan dimuat sesuai tanggal, termasuk yang belum diperiksa.</span></form>
+ <% } %>
+ <form class="editor-form occ-editor-form" method="post" action="<%= url('occ-save') %>" data-saving aria-describedby="occ-form-note">
+  <input type="hidden" name="csrf" value="<%= csrf %>"><input type="hidden" name="kind" value="<%= occKind %>"><input type="hidden" name="version" value="<%= row.version||0 %>">
+  <p class="form-intro" id="occ-form-note"><%= assetForm?'Kolom bertanda * wajib diisi. Kosongkan jumlah jika belum diketahui.':'Tanggal pengecekan: '+dateLabel+'. Pilih Not Checked untuk perangkat yang belum diperiksa; status ini tidak dihitung sebagai OK.' %></p>
+  <% if(assetForm){ %>
+  <input type="hidden" name="id" value="<%= row.id||'' %>">
+  <fieldset class="form-card"><legend>Identitas perangkat</legend><div class="form-grid occ-form-grid">
+   <label class="full-span">Nama inventory / aset *<input name="name" required maxlength="200" value="<%= row.name||'' %>" autocomplete="off"></label>
+   <label>Kategori *<input name="category" required maxlength="120" value="<%= row.category||'' %>" list="occ-category-options" autocomplete="off"><datalist id="occ-category-options"><% for(const category of [...new Set(occAssets.map(r=>r.category).filter(Boolean))]){ %><option value="<%= category %>"></option><% } %></datalist></label>
+   <label>Kode aset / setup<input name="asset_code" maxlength="120" value="<%= row.asset_code||'' %>" autocomplete="off"><small>Satu kode setup dapat dipakai bersama oleh PC dan monitornya.</small></label>
+   <label>Jumlah unit<input type="number" name="qty" min="0" max="999999999" step="1" inputmode="numeric" value="<%= row.qty??'' %>" placeholder="Belum diketahui"><small>Kosong berarti belum diketahui, bukan nol.</small></label>
+   <label>Penempatan / site<input name="placement" maxlength="200" value="<%= row.placement||'' %>" autocomplete="off"></label>
+   <label>Brand / manufacturer<input name="brand" maxlength="150" value="<%= row.brand||'' %>" autocomplete="off"></label>
+   <label>Model<input name="model" maxlength="150" value="<%= row.model||'' %>" autocomplete="off"></label>
+  </div></fieldset>
+  <fieldset class="form-card"><legend>Kondisi dan keterkaitan</legend><div class="form-grid occ-form-grid">
+   <label>Availability<select name="availability" required><% for(const option of occAssetAvailability){ %><option value="<%= option %>" <%= row.availability===option?'selected':'' %>><%= option %></option><% } %></select></label>
+   <label>Condition<select name="condition" required><% for(const option of occConditions){ %><option value="<%= option %>" <%= row.condition===option?'selected':'' %>><%= option %></option><% } %></select></label>
+   <label class="full-span">Perangkat terkait / pasangan<input name="related_device" maxlength="300" value="<%= row.related_device||'' %>" autocomplete="off"></label>
+  </div></fieldset>
+  <fieldset class="form-card"><legend>Spesifikasi dan dokumentasi</legend><div class="form-grid occ-form-grid">
+   <label class="full-span">Spesifikasi<textarea name="specifications" rows="4" maxlength="10000"><%= row.specifications||'' %></textarea></label>
+   <label class="full-span">Tautan foto / dokumentasi<input type="url" name="photo_url" maxlength="2048" value="<%= row.photo_url||'' %>" placeholder="https://" autocomplete="off"><small>Gunakan URL HTTP atau HTTPS. Tautan asli pada spreadsheet dipertahankan.</small></label>
+   <label class="full-span">Label dokumentasi<input name="photo_label" maxlength="200" value="<%= row.photo_label||'' %>" autocomplete="off"></label>
+   <label class="full-span">Catatan<textarea name="notes" rows="3" maxlength="10000"><%= row.notes||'' %></textarea></label>
+  </div></fieldset>
+  <% }else{ %>
+  <input type="hidden" name="work_date" value="<%= row.work_date %>">
+  <div class="occ-form-record"><strong><%= dateLabel %></strong><span><%= Number(row.version)>0?'Catatan tersimpan · versi '+row.version:'Belum ada catatan tersimpan untuk tanggal ini' %></span></div>
+  <% for(const group of groups){ %><fieldset class="form-card"><legend><%= group.title %></legend><div class="form-grid occ-form-grid">
+   <% for(const key of group.keys){const index=itemKeys.indexOf(key),stored=row.statuses?.[key]||'Not Checked'; %>
+   <label class="occ-device-field"><span class="occ-device-label"><strong><%= occKind==='cctv'?'CCTV '+key:key %></strong><small>Terisi: <%= stored %></small></span><select name="status_<%= index %>" required aria-label="Status <%= key %>"><% for(const option of statusChoices){ %><option value="<%= option %>" <%= stored===option?'selected':'' %>><%= option %></option><% } %></select></label>
+   <% } %>
+  </div></fieldset><% } %>
+  <div class="form-grid"><label class="full-span">Catatan pengecekan<textarea name="notes" rows="3" maxlength="10000"><%= row.notes||'' %></textarea><small>Tulis perangkat yang bermasalah dan tindak lanjut yang diperlukan.</small></label></div>
+  <% } %>
+  <div class="form-actions modal-actions"><a class="subtle-button" href="<%= url(destination) %>">Batal</a><button class="btn primary" type="submit"><%= assetForm?'Simpan inventory':'Simpan pengecekan' %></button></div>
+  <p class="fineprint">Perubahan tersimpan di aplikasi OCC. Spreadsheet sumber tidak diperbarui otomatis.</p>
+ </form>
+</section>
