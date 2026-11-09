@@ -1,0 +1,11 @@
+const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
+for(const visual of document.querySelectorAll('.kpi-grid,.speed-metrics,.period-grid,.speed-dashboard-content .speed-chart,.dashboard-lower>.panel,.occ-status-layout>.panel,.speed-dashboard-content .table-outer,.occ-page .table-outer')){
+ const wrapper=document.createElement('section');wrapper.className='dashboard-visual';const name=visual.querySelector('h3')?.textContent|| (visual.matches('.period-grid')?'Ringkasan periode':visual.matches('.kpi-grid,.speed-metrics')?'Ringkasan metrik':'Visual dashboard');wrapper.setAttribute('aria-label',name);visual.before(wrapper);wrapper.append(visual);visual.classList.add('dashboard-visual-content');
+ const toolbar=document.createElement('div');toolbar.className='dashboard-visual-toolbar';toolbar.setAttribute('role','group');toolbar.setAttribute('aria-label','Tampilan '+name);wrapper.prepend(toolbar);let scale=1;
+ const add=(text,label,handler)=>{const button=document.createElement('button');button.type='button';button.className='subtle-button';button.textContent=text;button.setAttribute('aria-label',label+' '+name);button.addEventListener('click',handler);toolbar.append(button);return button;};
+ function zoom(value){scale=clamp(value,.25,3);visual.style.zoom=String(scale);wrapper.dataset.visualZoom=scale.toFixed(2);}
+ add('−','Perkecil',()=>zoom(scale/1.15));add('+','Perbesar',()=>zoom(scale*1.15));add('Reset','Atur ulang',()=>zoom(1));
+ const full=add('Layar penuh','Layar penuh',async()=>{if(document.fullscreenElement===wrapper)await document.exitFullscreen();else if(wrapper.classList.contains('is-visual-expanded'))wrapper.classList.remove('is-visual-expanded');else try{await wrapper.requestFullscreen();}catch{wrapper.classList.add('is-visual-expanded');}sync();});
+ function sync(){full.textContent=document.fullscreenElement===wrapper||wrapper.classList.contains('is-visual-expanded')?'Kecilkan':'Layar penuh';}
+ document.addEventListener('fullscreenchange',sync);document.addEventListener('keydown',event=>{if(event.key==='Escape'&&wrapper.classList.contains('is-visual-expanded')){wrapper.classList.remove('is-visual-expanded');sync();}});
+}
