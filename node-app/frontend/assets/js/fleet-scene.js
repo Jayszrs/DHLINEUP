@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import {createTruck,createDriver,createAssignmentStand,createFleetGround,createOccRoom,createSelectionMarker} from './fleet-models.js';
+import {createTruck,createDriver,createAssignmentStand,createFleetGround,createOccRoom,createOccObject,createSelectionMarker} from './fleet-models.js';
+import {openObjectPreview} from './object-preview.js';
 
 const number=new Intl.NumberFormat('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
 const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
@@ -16,7 +17,7 @@ for(const container of document.querySelectorAll('[data-fleet-scene]')){
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6));renderer.setClearColor(0xffffff,0);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;
  const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-20,20,14,-14,.1,150),vector=new THREE.Vector3(),raycaster=new THREE.Raycaster();camera.up.set(0,1,0);
  scene.add(new THREE.HemisphereLight(0xf5f7f2,0x989a91,3));const key=new THREE.DirectionalLight(0xffedcf,3.4);key.position.set(8,17,11);scene.add(key);const fill=new THREE.DirectionalLight(0xd9e4e6,1.2);fill.position.set(-9,8,-3);scene.add(fill);
- const content=new THREE.Group();scene.add(content);
+ const content=new THREE.Group();scene.add(content);let roomModel=null,pickEntries=[];
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');let paused=reduced.matches,visible=true,contextLost=false,raf=0,lastFrame=0,elapsed=0,width=1,height=1,perPage=12,page=0,entries=[],selectedId=String(data.selectedId??''),pixel=container.dataset.sceneStyle!=='smooth';
  let yaw=.38,pitch=.82,zoom=1,target=new THREE.Vector3(0,.5,0),targetGoal=target.clone(),zoomGoal=1,halfHeight=14,dragging=false,dragMoved=false,pointerStart=null;
  const defaults={yaw:kind==='occ'?.42:.38,pitch:kind==='occ'?.69:.82};
@@ -34,7 +35,20 @@ for(const container of document.querySelectorAll('[data-fleet-scene]')){
   }
  }
  function draw(){if(contextLost)return;updateCamera();renderer.render(scene,camera);projectLabels();}
- function select(entry){selectedId=entry.id;container.dataset.selectedId=selectedId;for(const item of entries){const active=item.id===selectedId;item.label.classList.toggle('is-selected',active);item.label.setAttribute('aria-pressed',String(active));if(item.marker)item.marker.visible=active;}container.dispatchEvent(new CustomEvent('fleet-select',{bubbles:true,detail:{id:entry.id,item:entry.item}}));draw();}
+ function assignmentPreview(item){const model=new THREE.Group(),hasTruck=String(item.unit||'').toUpperCase().startsWith('DT');if(hasTruck){const truck=createTruck();truck.scale.setScalar(.66);truck.position.set(-.4,0,-.25);model.add(truck);}else model.add(createAssignmentStand());const driver=createDriver(true);driver.scale.setScalar(1.42);driver.position.set(hasTruck?1.9:0,hasTruck?0:.18,hasTruck?1.45:.3);model.add(driver);return model;}
+ function select(entry){selectedId=entry.id;container.dataset.selectedId=selectedId;for(const item of entries){const active=item.id===selectedId;item.label.classList.toggle('is-selected',active);item.label.setAttribute('aria-pressed',String(active));if(item.marker)item.marker.visible=active;}container.dispatchEvent(new CustomEvent('fleet-select',{bubbles:true,detail:{id:entry.item.category||entry.id,item:entry.item}}));
+  if(kind==='occ'){
+   const object=entry.object,category=object?.category||entry.id,assets=(data.assets||[]).filter(a=>a.group===category),patterns={kandao:/kandao/i,ptz:/ptz/i,speaker:/speaker/i,'video-wall':/video|tron/i,desk:/workstation|pc /i};const pattern=patterns[object?.type],matching=pattern?assets.filter(a=>pattern.test([a.name,a.brand,a.model].join(' '))):assets;
+   const rows=[['Objek',object?.name||entry.item.name],['Penempatan',({meeting:'Area meja rapat',workstation:'Area workstation'})[object?.zone]||'Ruang OCC JHO'],['Tanggal pemeriksaan',data.date],['Acuan model','Susunan ruang sesuai foto dan arahan; posisi ilustratif']];
+   if(object?.type==='chair'||object?.type==='meeting-table')rows.push(['Inventaris','Furnitur ilustratif; tidak dihitung sebagai perangkat pada spreadsheet']);
+   else if(matching.length)for(const asset of matching)rows.push([asset.name,[asset.asset_code,asset.brand,asset.model,asset.qty?`${asset.qty} unit`:'',asset.availability].filter(Boolean).join(' · ')]);
+   else rows.push(['Inventaris','Belum ada baris aset yang cocok pada sumber']);
+   const model=object?createOccObject(object.previewType||object.type):roomModel.clone(true);openObjectPreview({title:object?.name||entry.item.name,subtitle:'OCC Jakarta Head Office',model,rows,href:category==='furniture'?'':'/occ-assets?'+new URLSearchParams({group:category})});
+   if(object){targetGoal.set(...object.position);target.copy(targetGoal);zoom=zoomGoal=1.8;}
+  }else{
+   targetGoal.copy(entry.model.position).add(new THREE.Vector3(0,.8,0));target.copy(targetGoal);zoom=zoomGoal=1.6;
+   openObjectPreview({title:entry.item.unit||entry.item.name,subtitle:entry.item.name||'Penugasan DH Line Up',model:assignmentPreview(entry.item),rows:[['Tanggal',data.date],['Driver',entry.item.name||'Belum terdata'],['Unit',entry.item.unit||'Belum terdata'],['Perlu dilengkapi',(entry.item.missing||[]).join(' · ')||'Tidak ada']],href:entry.item.href});
+  }draw();}
  function createLabel(item,id){
   const button=document.createElement('button');button.type='button';button.className='scene-unit-label';button.dataset.sceneItemId=id;button.setAttribute('aria-pressed',String(id===selectedId));button.classList.toggle('is-selected',id===selectedId);
   const title=document.createElement('span');title.className='scene-label-unit';title.textContent=kind==='occ'?String(item.name||id):String(item.unit||'Unit belum diisi');button.append(title);
@@ -45,12 +59,15 @@ for(const container of document.querySelectorAll('[data-fleet-scene]')){
  }
  function rebuild(){
   if(contextLost)return;
-  while(content.children.length)content.remove(content.children[0]);labelLayer.replaceChildren();entries=[];
+  while(content.children.length)content.remove(content.children[0]);labelLayer.replaceChildren();entries=[];pickEntries=[];
   defaults.yaw=kind==='occ'?.42:perPage===4?.1:.38;defaults.pitch=kind==='occ'?.69:perPage===4?.93:.82;
   if(kind==='occ'){
-   content.add(createOccRoom(pixel));halfHeight=width<600?9.7:7.7;targetGoal.set(0,2.1,-.2);target.copy(targetGoal);
-   const positions={camera:[-5.95,4.8,-4.5],audio:[-3.1,2,-3.1],display:[.3,4.7,-5.6],workstation:[4.5,2.15,2.8],control:[3.14,1.8,-3.7]};const categories=Array.isArray(data.categories)?data.categories:items;
+   roomModel=createOccRoom(pixel);content.add(roomModel);const aspect=width/height;halfHeight=Math.max(12,10.6/Math.max(aspect,.5));targetGoal.set(0,1.7,0);target.copy(targetGoal);
+   const positions=roomModel.userData.hotspotAnchors||{};const categories=Array.isArray(data.categories)?data.categories:items;
    for(const[i,item]of categories.entries()){const id=idOf(item,i),position=positions[id];if(!position)continue;const label=createLabel(item,id),entry={id,item,label,anchor:new THREE.Vector3(...position)};label.addEventListener('click',()=>select(entry));entries.push(entry);}
+   for(const object of roomModel.userData.objects||[]){const proxy=new THREE.Mesh(new THREE.BoxGeometry(...object.size),new THREE.MeshBasicMaterial({visible:false}));proxy.position.set(...object.position);proxy.userData.objectId=object.id;content.add(proxy);pickEntries.push({id:object.id,item:{name:object.name,category:object.category},object,proxy});}
+   const picker=container.querySelector('[data-occ-object-picker]');if(picker){picker.replaceChildren(new Option('Pilih meja, kursi, kamera atau perangkat…',''));for(const entry of pickEntries)picker.add(new Option(entry.object.name,entry.id));}
+   container.dataset.pickableObjects=String(pickEntries.length);
   }else{
    const slice=filteredItems.slice(page*perPage,(page+1)*perPage),cols=perPage===4?2:Math.min(4,Math.max(1,slice.length)),rows=Math.max(1,Math.ceil(slice.length/cols));if(slice.length)content.add(createFleetGround(cols,rows,kind));const aspect=width/height,spanX=cols*7.7+2,spanZ=rows*6.9+3,projectedWidth=spanX*Math.cos(defaults.yaw)+spanZ*Math.sin(defaults.yaw);halfHeight=Math.max(6.7,(spanZ*Math.sin(defaults.pitch)+5)/2,projectedWidth/(2*Math.max(.5,aspect)))*1.04;targetGoal.set(0,.8,0);target.copy(targetGoal);
    for(const[i,item]of slice.entries()){const id=idOf(item,page*perPage+i),x=(i%cols-(cols-1)/2)*7.7,z=(Math.floor(i/cols)-(rows-1)/2)*6.9,model=new THREE.Group(),hasTruck=kind==='speed'||String(item.unit||'').trim().toUpperCase().startsWith('DT'),truck=hasTruck?createTruck():null;model.position.set(x,.015,z);if(truck){truck.scale.setScalar(kind==='lineup'?.66:.83);model.add(truck);model.userData.wheels=truck.userData.wheels;}else model.add(createAssignmentStand());content.add(model);
@@ -67,15 +84,16 @@ for(const container of document.querySelectorAll('[data-fleet-scene]')){
   draw();raf=requestAnimationFrame(tick);
  }
  function update(){if(contextLost)return;cancelAnimationFrame(raf);lastFrame=0;syncControls();draw();if(kind!=='occ'&&filteredItems.length&&!paused&&visible&&!document.hidden)raf=requestAnimationFrame(tick);}
- function resetCamera(){targetGoal.set(0,kind==='occ'?2.1:.8,kind==='occ'?-.2:0);target.copy(targetGoal);yaw=defaults.yaw;pitch=defaults.pitch;zoom=zoomGoal=1;draw();}
+ function resetCamera(){targetGoal.set(0,kind==='occ'?1.7:.8,0);target.copy(targetGoal);yaw=defaults.yaw;pitch=defaults.pitch;zoom=zoomGoal=1;draw();}
  function changePage(delta){const pages=Math.max(1,Math.ceil(filteredItems.length/perPage)),nextPage=clamp(page+delta,0,pages-1);if(nextPage===page)return;page=nextPage;rebuild();update();container.dispatchEvent(new CustomEvent('fleet-page',{bubbles:true,detail:{page,pageSize:perPage}}));}
  prev?.addEventListener('click',()=>changePage(-1));next?.addEventListener('click',()=>changePage(1));reset?.addEventListener('click',resetCamera);
+ container.querySelector('[data-occ-object-picker]')?.addEventListener('change',event=>{const entry=pickEntries.find(e=>e.id===event.target.value);if(entry)select(entry);event.target.value='';});
  container.addEventListener('fleet-filter',event=>{if(kind==='occ')return;const ids=new Set((event.detail?.ids||[]).map(String));filteredItems=items.filter((item,i)=>ids.has(idOf(item,i)));page=0;rebuild();update();});
  container.addEventListener('fleet-focus',event=>{const id=String(event.detail?.id??''),index=filteredItems.findIndex((item,i)=>idOf(item,i)===id);if(kind!=='occ'&&index>=0&&Math.floor(index/perPage)!==page){page=Math.floor(index/perPage);rebuild();}const entry=entries.find(item=>item.id===id);if(!entry)return;select(entry);if(event.detail?.zoom!==false&&entry.model){targetGoal.copy(entry.model.position).add(new THREE.Vector3(0,.8,0));zoomGoal=1.6;if(paused||reduced.matches){target.copy(targetGoal);zoom=zoomGoal;draw();}}});
  for(const control of container.querySelectorAll('button[data-scene-style]'))control.addEventListener('click',()=>{pixel=control.dataset.sceneStyle!=='smooth';container.dataset.sceneStyle=pixel?'pixel':'smooth';for(const other of container.querySelectorAll('button[data-scene-style]'))other.setAttribute('aria-pressed',String(other===control));rebuild();update();});
  canvas.style.touchAction='pan-y';canvas.style.cursor='grab';canvas.addEventListener('pointerdown',event=>{if(event.button!==0)return;pointerStart={x:event.clientX,y:event.clientY,yaw,pitch};dragging=true;dragMoved=false;canvas.setPointerCapture(event.pointerId);});
  canvas.addEventListener('pointermove',event=>{if(!dragging||!pointerStart)return;const dx=event.clientX-pointerStart.x,dy=event.clientY-pointerStart.y;if(Math.abs(dx)+Math.abs(dy)>6)dragMoved=true;if(!dragMoved)return;yaw=clamp(pointerStart.yaw-dx*.005,defaults.yaw-.65,defaults.yaw+.65);pitch=clamp(pointerStart.pitch+dy*.003,.48,1.15);canvas.style.cursor='grabbing';draw();});
- canvas.addEventListener('pointerup',event=>{if(!dragging)return;dragging=false;canvas.style.cursor='grab';if(canvas.hasPointerCapture(event.pointerId))canvas.releasePointerCapture(event.pointerId);if(!dragMoved&&entries.some(item=>item.model)){const rect=canvas.getBoundingClientRect();raycaster.setFromCamera(new THREE.Vector2((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1),camera);const hits=raycaster.intersectObjects(entries.flatMap(item=>item.model?[item.model]:[]),true);if(hits.length){let object=hits[0].object;while(object&&object.parent!==content)object=object.parent;const entry=entries.find(item=>item.model===object);if(entry)select(entry);}}});
+ canvas.addEventListener('pointerup',event=>{if(!dragging)return;dragging=false;canvas.style.cursor='grab';if(canvas.hasPointerCapture(event.pointerId))canvas.releasePointerCapture(event.pointerId);if(!dragMoved){const rect=canvas.getBoundingClientRect();raycaster.setFromCamera(new THREE.Vector2((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1),camera);if(kind==='occ'){const hits=raycaster.intersectObjects(pickEntries.map(e=>e.proxy),false);if(hits.length){const entry=pickEntries.find(e=>e.proxy===hits[0].object);if(entry)select(entry);}}else{const hits=raycaster.intersectObjects(entries.flatMap(item=>item.model?[item.model]:[]),true);if(hits.length){let object=hits[0].object;while(object&&object.parent!==content)object=object.parent;const entry=entries.find(item=>item.model===object);if(entry)select(entry);}}}});
  canvas.addEventListener('pointercancel',()=>{dragging=false;pointerStart=null;canvas.style.cursor='grab';});
  canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();contextLost=true;hideControls();cancelAnimationFrame(raf);canvas.hidden=true;labelLayer.hidden=true;if(fallback)fallback.hidden=false;});
  reduced.addEventListener('change',()=>{paused=reduced.matches;update();});document.addEventListener('visibilitychange',update);new IntersectionObserver(([entry])=>{visible=entry.isIntersecting;update();},{rootMargin:'80px'}).observe(container);

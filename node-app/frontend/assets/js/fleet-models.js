@@ -26,9 +26,9 @@ function helmet(parent){
 // Every clone shares buffers; color variation does not add extra draw calls.
 function bake(group){
  group.updateMatrixWorld(true);const batches=new Map();
- group.traverse(node=>{if(!node.isMesh)return;const g=node.geometry.index?node.geometry.toNonIndexed():node.geometry.clone();g.applyMatrix4(node.matrixWorld);const key=[node.material.roughness,node.material.metalness].join(':');let batch=batches.get(key);if(!batch){batch={list:[],roughness:node.material.roughness,metalness:node.material.metalness};batches.set(key,batch);}batch.list.push({geometry:g,color:node.material.color});});
+ group.traverse(node=>{if(!node.isMesh)return;const g=node.geometry.index?node.geometry.toNonIndexed():node.geometry.clone();g.applyMatrix4(node.matrixWorld);const key=[node.material.roughness,node.material.metalness].join(':');let batch=batches.get(key);if(!batch){batch={list:[],roughness:node.material.roughness,metalness:node.material.metalness};batches.set(key,batch);}batch.list.push({geometry:g,color:node.material.color,sourceColors:node.material.vertexColors?g.attributes.color?.array:null});});
  const result=new THREE.Group();
- for(const[key,batch]of batches){const count=batch.list.reduce((n,piece)=>n+piece.geometry.attributes.position.count,0),positions=new Float32Array(count*3),normals=new Float32Array(count*3),colors=new Float32Array(count*3);let offset=0;for(const{geometry:g,color}of batch.list){positions.set(g.attributes.position.array,offset);normals.set(g.attributes.normal.array,offset);for(let i=offset;i<offset+g.attributes.position.array.length;i+=3){colors[i]=color.r;colors[i+1]=color.g;colors[i+2]=color.b;}offset+=g.attributes.position.array.length;g.dispose();}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(positions,3));g.setAttribute('normal',new THREE.BufferAttribute(normals,3));g.setAttribute('color',new THREE.BufferAttribute(colors,3));g.computeBoundingSphere();if(!bakedMaterials.has(key))bakedMaterials.set(key,new THREE.MeshStandardMaterial({vertexColors:true,roughness:batch.roughness,metalness:batch.metalness}));result.add(new THREE.Mesh(g,bakedMaterials.get(key)));}
+ for(const[key,batch]of batches){const count=batch.list.reduce((n,piece)=>n+piece.geometry.attributes.position.count,0),positions=new Float32Array(count*3),normals=new Float32Array(count*3),colors=new Float32Array(count*3);let offset=0;for(const{geometry:g,color,sourceColors}of batch.list){positions.set(g.attributes.position.array,offset);normals.set(g.attributes.normal.array,offset);if(sourceColors)colors.set(sourceColors,offset);else for(let i=offset;i<offset+g.attributes.position.array.length;i+=3){colors[i]=color.r;colors[i+1]=color.g;colors[i+2]=color.b;}offset+=g.attributes.position.array.length;g.dispose();}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(positions,3));g.setAttribute('normal',new THREE.BufferAttribute(normals,3));g.setAttribute('color',new THREE.BufferAttribute(colors,3));g.computeBoundingSphere();if(!bakedMaterials.has(key))bakedMaterials.set(key,new THREE.MeshStandardMaterial({vertexColors:true,roughness:batch.roughness,metalness:batch.metalness}));result.add(new THREE.Mesh(g,bakedMaterials.get(key)));}
  return result;
 }
 
@@ -87,43 +87,93 @@ function chair(g,x,z,angle,pixel){
  for(const side of[-1,1]){box(unit,.08,.08,.55,side*.45,1.13,0,0x465156);box(unit,.05,.36,.05,side*.45,.96,.12,0x57636a);}for(let i=0;i<5;i++){const a=i*Math.PI*.4;box(unit,.06,.06,.48,Math.sin(a)*.2,.16,Math.cos(a)*.2,0x4a5559,[0,a,0]);cylinder(unit,.08,.08,.07,Math.sin(a)*.41,.09,Math.cos(a)*.41,0x283135,8,[Math.PI/2,0,0]);}
 }
 function monitor(g,x,z,angle=0){const unit=new THREE.Group();unit.position.set(x,1.46,z);unit.rotation.y=angle;g.add(unit);box(unit,.92,.55,.06,0,.42,0,0x222f37);box(unit,.81,.43,.013,0,.43,.038,0x507e83);box(unit,.05,.28,.05,0,.06,0,0x3c484c);box(unit,.42,.035,.24,0,-.055,.03,0x46545a);box(unit,.7,.025,.25,0,-.06,.4,0x677174);}
+function workstation(g){
+ box(g,2.64,.15,1.27,0,1.28,0,0xc7b397);box(g,2.64,.045,1.27,0,1.38,0,0xe0ceb0);box(g,2.46,.69,.08,0,.95,-.53,0x7f8983);
+ for(const side of[-1,1]){box(g,.09,1.22,.88,side*1.12,.62,0,0x556662);box(g,.36,.05,.94,side*1.12,.08,0,0x3b4e4b);}
+ monitor(g,0,-.23);box(g,.32,.69,.62,1,.73,.05,0x344348);box(g,.019,.43,.42,1.17,.8,.05,0x45575b);box(g,.029,.035,.035,1.18,1.02,.26,0x93aa98);
+ box(g,.05,.03,.08,.49,1.43,.36,0x526863);box(g,.52,.023,.29,0,1.44,.26,0x6f7974);box(g,.055,.05,.055,-.9,1.45,.32,0xd8e0d5);
+ cylinder(g,.085,.11,.036,-.92,1.44,-.29,0x3d514c,12);cylinder(g,.013,.013,.27,-.92,1.59,-.3,0x657a72,10,[.17,0,0]);
+}
+function meetingTable(g){
+ for(const x of[-3.6,3.6]){box(g,1.4,.17,6.2,x,1.24,0,0xbda486);box(g,1.43,.055,6.24,x,1.355,0,0xdfc6a5);box(g,.09,1.12,5.8,x,.62,0,0x7c8780);for(const z of[-2.1,2.1])box(g,.83,.07,.44,x,.085,z,0x57635f);}
+ box(g,8.63,.17,1.45,0,1.24,3.1,0xbda486);box(g,8.67,.055,1.47,0,1.355,3.1,0xdfc6a5);box(g,7.9,1.12,.1,0,.62,3.1,0x7c8780);
+ for(const x of[-2.7,-.9,.9,2.7]){box(g,.55,.032,.34,x,1.42,3.25,0x425954);cylinder(g,.1,.12,.045,x,1.44,2.64,0x384c48,12);cylinder(g,.015,.015,.34,x,1.62,2.64,0x5a6e65,12,[.16,0,0]);}
+ for(const side of[-1,1])for(const z of[-2.35,-.8,.8,2.35]){cylinder(g,.1,.12,.045,side*3.13,1.44,z,0x384c48,12);cylinder(g,.015,.015,.34,side*3.13,1.62,z,0x5a6e65,12,[0,0,-side*.16]);}
+ box(g,.58,.04,.38,2.74,1.43,3.1,0x33494d);box(g,.48,.012,.29,2.74,1.459,3.1,0x86a7a5);
+}
+function kandao(g,pixel){
+ cylinder(g,.68,.75,.09,0,.07,0,0x7d8982,pixel?12:32);cylinder(g,.12,.17,1.08,0,.63,0,0x69776f,pixel?10:24);cylinder(g,.57,.57,.11,0,1.22,0,0xbba78b,pixel?12:32);
+ cylinder(g,.245,.27,.14,0,1.36,0,0x354a4b,pixel?12:32);cylinder(g,.14,.155,.46,0,1.64,0,0x253b40,pixel?12:32);cylinder(g,.17,.17,.065,0,1.91,0,0x42565a,pixel?12:32);
+ for(const side of[-1,1]){cylinder(g,.075,.075,.04,0,1.73,side*.15,0x131f26,20,[Math.PI/2,0,0]);cylinder(g,.047,.047,.046,0,1.73,side*.172,0x517985,20,[Math.PI/2,0,0]);}
+ for(let y=1.46;y<1.68;y+=.045)torus(g,.146,.006,0,y,0,0x617475,[Math.PI/2,0,0],24);
+}
+function ptz(g,pixel){
+ box(g,.7,.08,.53,0,.04,0,0xd3dad2);box(g,.1,.48,.1,0,.3,-.15,0xa1ada4);cylinder(g,.23,.26,.14,0,.52,0,0xd4dad1,pixel?10:28);
+ for(const side of[-1,1])box(g,.1,.36,.36,side*.25,.71,0,0xc4cfc7);sphere(g,.24,0,.74,0,0xc6d1c9,[1,.9,1]);
+ cylinder(g,.16,.17,.15,0,.76,.21,0x2a3a40,24,[Math.PI/2,0,0]);cylinder(g,.105,.105,.018,0,.76,.295,0x3f6878,24,[Math.PI/2,0,0]);cylinder(g,.053,.053,.021,0,.76,.307,0x152d39,24,[Math.PI/2,0,0]);
+}
+function speaker(g,pixel){
+ cylinder(g,.38,.4,.12,0,.11,0,0xe0e3d8,pixel?12:32);cylinder(g,.345,.345,.015,0,.043,0,0x657671,pixel?12:32);
+ for(const r of[.08,.15,.22,.29])torus(g,r,.009,0,.032,0,0xb2bdb0,[Math.PI/2,0,0],pixel?16:32);
+ for(let x=-.24;x<=.24;x+=.08)for(let z=-.24;z<=.24;z+=.08)if(x*x+z*z<.075)cylinder(g,.013,.013,.007,x,.029,z,0x65766f,6);
+}
+function videoWall(g){
+ box(g,12.6,3.05,.22,0,1.58,0,0x121d24);for(const x of[-3.12,3.12]){box(g,6.08,2.8,.035,x,1.58,.13,0x41656e);for(let row=0;row<2;row++)for(let col=0;col<4;col++){const sx=x+(col-1.5)*1.43,sy=1.58+(row-.5)*1.21;box(g,1.34,1.08,.016,sx,sy,.16,row?0x70a49f:0x31555e);box(g,1.22,.025,.016,sx,sy-.45,.175,0xb7c8be);box(g,.21,.024,.016,sx-.46,sy+.43,.18,0xc1a066);}}
+ box(g,12.2,.055,.28,0,.035,.025,0x3b4f4e);
+}
+const objectPrototypes=new Map();
+export function createOccObject(type,pixel=true){
+ const aliases={'workstation':'desk','conference-table':'meeting-table','camera':'kandao','screen':'video-wall'},keyType=aliases[type]||type,key=keyType+':'+(pixel?'pixel':'smooth');
+ if(!objectPrototypes.has(key)){const g=new THREE.Group();
+  if(keyType==='desk')workstation(g);
+  else if(keyType==='chair')chair(g,0,0,0,pixel);
+  else if(keyType==='meeting-table')meetingTable(g);
+  else if(keyType==='kandao')kandao(g,pixel);
+  else if(keyType==='ptz')ptz(g,pixel);
+  else if(keyType==='speaker')speaker(g,pixel);
+  else if(keyType==='video-wall')videoWall(g);
+  else throw new Error('Unknown OCC preview type: '+String(type));
+  const object=bake(g);object.userData={type:keyType,illustrativeModel:true};objectPrototypes.set(key,object);
+ }
+ return objectPrototypes.get(key).clone();
+}
 const roomPrototypes=new Map();
 function makeRoom(pixel){
- const g=new THREE.Group(),positions=[];box(g,14,.35,12.5,0,-.22,0,0xa9aaa5);box(g,13.65,.04,12.1,0,-.02,0,0xc4c4bb);
- for(let x=-6;x<=6;x++)for(let z=-5;z<=5;z++)box(g,.97,.016,.97,x,.015,z,(x+z)%2?0xb9bbb5:0xb1b4ae);
- box(g,13.8,5.3,.2,0,2.55,-6,0x283338);box(g,13.8,1.25,.24,0,5,-6,0xda6b2f);box(g,.17,5.2,10,-6.9,2.5,-.9,0xb8b9b2);
- for(let z=-4.8;z<3.2;z+=.25)box(g,.06,3.2,.035,-6.77,1.62,z,0x929b9a);
- // The front is the video-wall end (negative Z). Eight desks face it in
- // two rows of four, with a separate meeting table directly before the wall.
- for(const z of[-5.2,-1.65,2.7]){box(g,13.9,.27,.23,0,5.55,z,0x6d4b37);box(g,13.8,.06,.31,0,5.73,z,0xd16a31);for(let x=-6;x<7;x+=3.2)box(g,.07,.43,.1,x,5.19,z,0x535656);}
- for(const x of[-5.7,-5.45,-4.9,4.9,5.45,5.7])cylinder(g,.027,.027,10.35,x,5.45,-.25,0xe78246,pixel?4:12,[Math.PI/2,0,0]);
- for(const x of[-4.2,0,4.2])for(const z of[-4.2,1.8]){cylinder(g,.015,.015,.68,x,5.13,z,0x8e8a7c,6);cylinder(g,.31,.36,.27,x,4.66,z,0xdedbcf,pixel?8:24);cylinder(g,.29,.29,.03,x,4.51,z,0xf8f2d9,pixel?8:24);}
- box(g,12.6,2.6,.18,0,3.43,-5.8,0x121d24);
- for(const x of[-3.12,3.12]){box(g,6.08,2.36,.035,x,3.43,-5.69,0x41656e);for(let row=0;row<2;row++)for(let col=0;col<4;col++){const sx=x+(col-1.5)*1.43,sy=3.43+(row-.5)*1.01;box(g,1.34,.88,.016,sx,sy,-5.66,row?0x70a49f:0x31555e);box(g,1.22,.025,.016,sx,sy-.37,-5.645,0xb7c8be);box(g,.21,.024,.016,sx-.46,sy+.34,-5.64,0xc1a066);}}
- // A timber meeting surface, six meeting chairs, microphones and the
- // central conference camera echo the provided room photograph.
- box(g,7.5,.16,1.44,0,1.24,-3.72,0xcbb598);box(g,7.48,.055,1.43,0,1.345,-3.72,0xdfcbb0);
- for(const x of[-2.8,2.8]){box(g,.2,1.18,.8,x,.6,-3.72,0x6e7670);box(g,1.4,.08,.8,x,.085,-3.72,0x565f5c);}
- for(const x of[-2.2,2.2]){chair(g,x,-2.56,0,pixel);chair(g,x,-4.88,Math.PI,pixel);}
- chair(g,-4.53,-3.72,-Math.PI/2,pixel);chair(g,4.53,-3.72,Math.PI/2,pixel);
- for(const x of[-2.2,2.2]){box(g,.62,.035,.36,x,1.45,-3.6,0x4e5e60);box(g,.62,.42,.04,x,1.66,-3.84,0x304349,[-.15,0,0]);box(g,.55,.33,.014,x,1.66,-3.812,0x698c91,[-.15,0,0]);}
- cylinder(g,.24,.27,.12,0,1.45,-3.72,0x3f5556,pixel?8:24);cylinder(g,.12,.12,.35,0,1.68,-3.72,0x263d44,pixel?8:20);
- for(const x of[-3.1,-1.1,1.1,3.1]){cylinder(g,.1,.13,.04,x,1.44,-3.09,0x394e4c,8);cylinder(g,.014,.014,.3,x,1.6,-3.1,0x5c6d69,8,[.2,0,0]);}
- box(g,.58,.04,.38,3.14,1.44,-3.7,0x33494d);box(g,.48,.012,.29,3.14,1.469,-3.7,0x86a7a5);
- for(const[row,z]of[[0,-.18],[1,3.14]]){
-  for(const[column,x]of[[-4.5,-1.5,1.5,4.5]].flatMap(values=>values.map((x,i)=>[i,x]))){
-   box(g,2.64,.15,1.27,x,1.28,z,0xc7b397);box(g,2.64,.045,1.27,x,1.38,z,0xe0ceb0);box(g,2.46,.69,.08,x,.95,z-.53,0x7f8983);
-   for(const side of[-1,1]){box(g,.09,1.22,.88,x+side*1.12,.62,z,0x556662);box(g,.36,.05,.94,x+side*1.12,.08,z,0x3b4e4b);}
-   monitor(g,x,z-.23);chair(g,x,z+1.12,0,pixel);
-   box(g,.32,.69,.62,x+1,.73,z+.05,0x344348);box(g,.019,.43,.42,x+1.17,.8,z+.05,0x45575b);box(g,.029,.035,.035,x+1.18,1.02,z+.26,0x93aa98);
-   box(g,.05,.03,.08,x+.49,1.43,z+.36,0x526863);box(g,.52,.023,.29,x,1.44,z+.26,0x6f7974);box(g,.055,.05,.055,x-.9,1.45,z+.32,0xd8e0d5);
-   cylinder(g,.085,.11,.036,x-.92,1.44,z-.29,0x3d514c,8);cylinder(g,.013,.013,.27,x-.92,1.59,z-.3,0x657a72,8,[.17,0,0]);
-   positions.push({row:row===0?'front':'back',column:column+1,position:[x,0,z],facing:'front-video-wall'});
-  }
+ const g=new THREE.Group(),positions=[],objects=[],meetingSeats=[];
+ const record=(id,name,type,category,position,size,extra={})=>objects.push({id,name,type,previewType:type,category,position,size,rotation:[0,0,0],...extra});
+ const place=(type,x,y,z,rotation=0)=>{const object=createOccObject(type,pixel);object.position.set(x,y,z);object.rotation.y=rotation;g.add(object);return object;};
+ box(g,14,.35,21.6,0,-.22,.7,0xa9aaa5);box(g,13.65,.04,21.2,0,-.02,.7,0xc4c4bb);
+ for(let x=-6;x<=6;x++)for(let z=-9;z<=10;z++)box(g,.97,.016,.97,x,.015,z,(x+z)%2?0xb9bbb5:0xb1b4ae);
+ box(g,13.8,5.7,.2,0,2.75,-9.7,0x283338);box(g,13.8,1.1,.24,0,5.8,-9.7,0xda6b2f);box(g,.17,5.9,18,-6.9,2.85,-.4,0xb8b9b2);
+ for(let z=-9;z<8.6;z+=.25)box(g,.06,3.5,.035,-6.77,1.77,z,0x929b9a);
+ // The cut-away ceiling exposes the seating layout without hiding its orange beams.
+ for(const z of[-8.4,-3.5,1.8,7.8]){box(g,13.9,.27,.23,0,6.1,z,0x6d4b37);box(g,13.8,.06,.31,0,6.28,z,0xd16a31);for(let x=-6;x<7;x+=3.2)box(g,.07,.43,.1,x,5.74,z,0x535656);}
+ for(const x of[-5.7,-5.45,-4.9,4.9,5.45,5.7])cylinder(g,.027,.027,19.9,x,6,.15,0xe78246,pixel?4:12,[Math.PI/2,0,0]);
+ for(const x of[-4.2,0,4.2])for(const z of[-6.3,5.1]){cylinder(g,.015,.015,.68,x,5.67,z,0x8e8a7c,6);cylinder(g,.31,.36,.27,x,5.2,z,0xdedbcf,pixel?8:24);cylinder(g,.29,.29,.03,x,5.05,z,0xf8f2d9,pixel?8:24);}
+ place('video-wall',0,1.75,-9.43);record('front-video-wall','Videotron ruang OCC','video-wall','display',[0,3.33,-9.4],[12.6,3.1,.4]);
+ place('ptz',0,4.96,-9.12);record('front-ptz','Kamera PTZ di atas videotron','ptz','camera',[0,5.48,-9.03],[.75,1.06,.72]);
+ place('meeting-table',0,0,-5);
+ record('meeting-table-left','Meja rapat U · sisi kiri','meeting-table','furniture',[-3.6,.93,-5],[1.5,1.9,6.3],{part:'left'});
+ record('meeting-table-crossbar','Meja rapat U · penghubung belakang','meeting-table','furniture',[0,.93,-1.9],[8.7,1.9,1.5],{part:'crossbar'});
+ record('meeting-table-right','Meja rapat U · sisi kanan','meeting-table','furniture',[3.6,.93,-5],[1.5,1.9,6.3],{part:'right'});
+ for(const side of[-1,1])for(const[index,z]of[-7.3,-5.7,-4.1,-2.5].entries()){
+  const x=side*5.1,rotation=side<0?Math.PI/2:-Math.PI/2,id='meeting-chair-'+(side<0?'left':'right')+'-'+(index+1);place('chair',x,0,z,rotation);record(id,'Kursi rapat '+(side<0?'kiri':'kanan')+' '+(index+1),'chair','furniture',[x,.87,z],[1.03,1.8,1.05],{rotation:[0,rotation,0],zone:'meeting'});meetingSeats.push({id,side:side<0?'left':'right',position:[x,0,z],rotation});
  }
- for(const[x,z]of[[-6.55,-4.4],[6.5,-4.5]]){box(g,.32,.2,.43,x,4.38,z,0xe0e4da,[0,x<0?-.5:.5,.15]);box(g,.05,.15,.05,x,4.53,z,0x8d9691);}
- for(const x of[-5.1,5.1])for(const z of[-4.9,2.5])box(g,.56,.08,.56,x,5.1,z,0xc9c9be);
- const result=bake(g);result.userData={layout:'two-workstation-rows-and-front-meeting-table',workstationCount:8,workstationRows:[4,4],workstationPositions:positions,workstationChairCount:8,meetingChairCount:6,meetingTableCount:1,videoWallCount:1,frontDirection:'negative-z',illustrativeLayout:true,hotspotAnchors:{camera:[-5.95,4.8,-4.5],audio:[-3.1,2,-3.1],display:[.3,4.7,-5.6],workstation:[4.5,2.15,2.8],control:[3.14,1.8,-3.7]}};return result;
+ for(const[index,x]of[-2.7,-.9,.9,2.7].entries()){
+  const id='meeting-chair-crossbar-'+(index+1);place('chair',x,0,-.58,Math.PI);record(id,'Kursi rapat penghubung '+(index+1),'chair','furniture',[x,.87,-.58],[1.03,1.8,1.05],{rotation:[0,Math.PI,0],zone:'meeting'});meetingSeats.push({id,side:'crossbar',position:[x,0,-.58],rotation:Math.PI});
+ }
+ place('kandao',0,0,-4.8);record('meeting-kandao','Kandao di pedestal tengah meja rapat','kandao','camera',[0,.99,-4.8],[1.55,2.03,1.55]);
+ for(const[row,z]of[[0,3.2],[1,6.7]])for(const[column,x]of[-4.5,-1.5,1.5,4.5].entries()){
+  const rowName=row===0?'front':'back',index=row*4+column+1,id='workstation-'+rowName+'-'+(column+1);place('desk',x,0,z);place('chair',x,0,z+1.12,Math.PI);
+  record(id,'Meja workstation '+(row===0?'depan':'belakang')+' '+(column+1),'desk','workstation',[x,1.15,z],[2.68,2.28,1.5],{row:rowName,column:column+1,assetReference:index===8?'DRONE-PC':'CC-OPT'+index});
+  record(id+'-chair','Kursi workstation '+(row===0?'depan':'belakang')+' '+(column+1),'chair','furniture',[x,.87,z+1.12],[1.03,1.8,1.05],{row:rowName,column:column+1,rotation:[0,Math.PI,0],zone:'workstation'});
+  positions.push({id,row:rowName,column:column+1,position:[x,0,z],facing:'front-video-wall'});
+ }
+ for(const[column,x]of[-4.8,4.8].entries())for(const[row,z]of[-7,-1,6].entries()){
+  const id='ceiling-speaker-'+(column*3+row+1);place('speaker',x,5.71,z);record(id,'Speaker plafon '+(column*3+row+1),'speaker','audio',[x,5.82,z],[.85,.28,.85]);
+ }
+ const result=bake(g);result.userData={layout:'u-conference-table-and-eight-workstations-behind',workstationCount:8,workstationRows:[4,4],workstationPositions:positions,workstationChairCount:8,meetingChairCount:12,meetingChairSides:{left:4,crossbar:4,right:4},meetingChairPositions:meetingSeats,meetingTableCount:1,meetingTableShape:'rectangular-U-open-toward-video-wall',meetingTableParts:3,videoWallCount:1,kandaoCount:1,ptzCount:1,ceilingSpeakerCount:6,frontDirection:'negative-z',illustrativeLayout:true,roomSize:[14,6.45,21.6],roomBounds:{min:[-7,-.4,-10.1],max:[7,6.45,11.5]},objects,hotspotAnchors:{camera:[0,5.85,-9.03],audio:[-4.8,5.95,-1],display:[.3,4.7,-9.4],workstation:[4.5,2.35,6.5],control:[2.74,1.9,-1.9]}};return result;
 }
-export function createOccRoom(pixel=true){const key=pixel?'pixel':'smooth';if(!roomPrototypes.has(key)){const room=makeRoom(pixel);for(const z of[-.18,3.14]){const shade=contactShadow(13,3.15);shade.position.set(0,.035,z+.4);room.add(shade);}const meetingShade=contactShadow(9,2.6);meetingShade.position.set(0,.035,-3.72);room.add(meetingShade);roomPrototypes.set(key,room);}return roomPrototypes.get(key).clone();}
+
+export function createOccRoom(pixel=true){const key=pixel?'pixel':'smooth';if(!roomPrototypes.has(key)){const room=makeRoom(pixel);for(const z of[3.2,6.7]){const shade=contactShadow(13,3.15);shade.position.set(0,.035,z+.4);room.add(shade);}for(const x of[-3.6,3.6]){const shade=contactShadow(3.4,8.2);shade.position.set(x,.035,-5);room.add(shade);}const crossbarShade=contactShadow(10,2.8);crossbarShade.position.set(0,.035,-1.9);room.add(crossbarShade);roomPrototypes.set(key,room);}return roomPrototypes.get(key).clone();}
 export function createSelectionMarker(radius=2.15){const key='ring:'+radius;if(!geometries.has(key))geometries.set(key,new THREE.RingGeometry(radius-.035,radius,64));const marker=new THREE.Mesh(geometries.get(key),material(0xb97521));marker.rotation.x=-Math.PI/2;marker.position.y=.045;marker.visible=false;return marker;}
