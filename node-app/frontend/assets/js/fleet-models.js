@@ -56,6 +56,17 @@ function makeTruckBody(){
 }
 export function createTruck(){truckBody??=makeTruckBody();wheelPrototype??=makeWheel();const root=new THREE.Group();root.add(truckBody.clone(),contactShadow(6.7,4.1));const wheels=[];for(const x of[-1.6,1.67])for(const z of[-1.34,1.34]){const wheel=wheelPrototype.clone();wheel.position.set(x,.73,z);root.add(wheel);wheels.push(wheel);}root.userData.wheels=wheels;root.userData.labelHeight=3.45;root.userData.modelFeatures=['open reinforced dump body','four mining tires','tread and rim bolts','cab glazing and wiper','service ladder','guard rails','radiator','mirrors','rear reflectors'];return root;}
 
+let parkingPrototype;
+export function createParkingLot(){
+ if(!parkingPrototype){const g=new THREE.Group();box(g,28,.22,22,0,-.16,0,0x5e6b60);
+  for(const x of[-7,5])for(const z of[-4.3,0,4.3]){for(const side of[-1,1])box(g,9,.012,.08,x,.002,z+side*1.9,0xe0d7ac);box(g,.08,.012,3.8,x-4.5,.002,z,0xe0d7ac);box(g,.2,.13,3.1,x-3.9,.06,z,0xc9b86d);}
+  box(g,25,4.5,2,0,2.2,-9,0x52605e);box(g,25.5,.15,3.2,0,4.55,-8.8,0x897f66);box(g,25.6,.18,.18,0,4.48,-7.2,0xc78939);
+  for(const x of[-8,0,8]){box(g,5.4,3.4,.12,x,1.7,-7.94,0x324542);for(let y=.3;y<3.3;y+=.3)box(g,5.2,.035,.025,x,y,-7.86,0x63766e);}
+  for(const x of[-12,12])for(const z of[-6,6]){cylinder(g,.12,.14,.85,x,.42,z,0xe0b44e,10);cylinder(g,.13,.13,.12,x,.61,z,0x34443d,10);}
+  officeSign(g,'AREA PARKIR',0,3.9,-7.8);parkingPrototype=bake(g);
+ }
+ const lot=parkingPrototype.clone();lot.userData.illustrativeParking=true;return lot;
+}
 let roadPrototype;
 export function createMineRoad(){
  if(!roadPrototype){const g=new THREE.Group();box(g,18,.28,22,0,-.23,0,0x8b775a);box(g,18,.08,8.2,0,-.045,0,0xb29a72);
