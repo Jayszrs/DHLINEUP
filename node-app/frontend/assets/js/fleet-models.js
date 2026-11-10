@@ -123,6 +123,61 @@ function staffCharacter({seated=false,female=false,clipboard=false}={}){
  }
  return characterPrototypes.get(key).clone();
 }
+// Office staff use a separate smooth, articulated model; mine drivers retain PPE.
+const officePrototypes=new Map();
+function officeEllipsoid(parent,x,y,z,rx,ry,rz,color,roughness=.62){
+ const key='office-sphere';if(!geometries.has(key))geometries.set(key,new THREE.SphereGeometry(1,32,24));
+ const item=mesh(parent,geometries.get(key),material(color,roughness),x,y,z);item.scale.set(rx,ry,rz);return item;
+}
+function officeContour(parent,profile,depth,color){
+ const key='office-contour:'+JSON.stringify(profile)+':'+depth;if(!geometries.has(key))geometries.set(key,new THREE.LatheGeometry(profile.map(([r,y])=>new THREE.Vector2(r,y)),40));
+ const item=mesh(parent,geometries.get(key),material(color,.74));item.scale.z=depth;return item;
+}
+function officeLimb(parent,a,b,radius,color,endRadius=radius){
+ const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),length=start.distanceTo(end),key=['office-limb',radius,endRadius,length.toFixed(5)].join(':');
+ if(!geometries.has(key)){const half=length/2,profile=[[0,-half-radius*.7],[radius*.68,-half-radius*.46],[radius,-half],[radius*.97,-half+length*.2],[(radius+endRadius)*.49,0],[endRadius,half],[endRadius*.68,half+endRadius*.46],[0,half+endRadius*.7]];geometries.set(key,new THREE.LatheGeometry(profile.map(([r,y])=>new THREE.Vector2(r,y)),28));}
+ const item=mesh(parent,geometries.get(key),material(color,.78));item.position.copy(start).add(end).multiplyScalar(.5);item.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),end.sub(start).normalize());return item;
+}
+function officeCurve(parent,points,radius,color){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));return mesh(parent,new THREE.TubeGeometry(curve,24,radius,8,false),material(color,.65));}
+function officeHand(parent,x,y,z,skin,seated,side){
+ const hand=new THREE.Group();hand.position.set(x,y,z);if(!seated)hand.rotation.x=Math.PI/2;
+ officeEllipsoid(hand,0,0,0,.071,.038,.105,skin);
+ for(let i=0;i<4;i++){const dx=(i-1.5)*.032,tip=.105+[.025,.045,.035,.006][i];officeLimb(hand,[dx,0,.045],[dx,0,tip],.018,skin,.014);}
+ officeLimb(hand,[side*.052,0,-.005],[side*.091,-.006,.05],.024,skin,.018);parent.add(hand);
+}
+function officeCharacter({seated=false,female=false,seat=1}={}){
+ const key=[seated,female,seat].join(':');if(!officePrototypes.has(key)){
+  const root=new THREE.Group(),body=new THREE.Group(),head=new THREE.Group(),skin=[0xd9a47e,0xe8b996,0xdba783,0xe1ad89,0xc99874,0xdba781][(seat-1)%6],hair=[0x222326,0x29211f,0x252127,0x362b27,0x292725,0x20262a][(seat-1)%6],shirt=0x168ea6,shirtShade=0x117689,navy=0x28394c;
+  // Tailored shoulders, waist and hips follow a continuous surface rather than blocks.
+  officeContour(body,[[0,.88],[.235,.9],[.25,.99],[female?.235:.27,1.16],[female?.27:.29,1.38],[.34,1.53],[.305,1.61],[.14,1.67],[0,1.67]],.65,shirt);
+  officeContour(body,[[0,.82],[.24,.82],[.255,.9],[.25,.97],[0,.97]],.73,navy);
+  cylinder(body,.084,.092,.19,0,1.695,0,skin,24);
+  officeCurve(body,[[0,1, .17],[0,1.32,.18],[0,1.59,.155]],.009,shirtShade);
+  for(const side of[-1,1]){const collar=new THREE.Shape();collar.moveTo(side*.012,1.66);collar.lineTo(side*.144,1.61);collar.lineTo(side*.069,1.515);collar.closePath();mesh(body,new THREE.ExtrudeGeometry(collar,{depth:.014,bevelEnabled:true,bevelSize:.008,bevelThickness:.006,bevelSegments:2,steps:1}),material(0x35a1b3,.8),0,0,.148);}
+  for(const y of[1.12,1.3,1.48])officeEllipsoid(body,.018,y,.185,.012,.012,.008,0xc8d6d6);
+  officeCurve(body,[[-.09,1.64,.15],[-.12,1.39,.19],[0,1.29,.205],[.12,1.39,.19],[.09,1.64,.15]],.008,0x223c51);
+  roundBox(body,.115,.15,.018,0,1.27,.211,0xe9ede6,.012);box(body,.09,.025,.006,0,1.306,.224,0xe4a32a);box(body,.06,.008,.006,0,1.267,.225,0x68848c);
+  if(seated){for(const side of[-1,1]){officeLimb(body,[side*.145,.88,.015],[side*.17,.83,.43],.112,navy,.105);officeLimb(body,[side*.17,.83,.43],[side*.17,.22,.47],.09,navy,.07);officeEllipsoid(body,side*.17,.13,.545,.11,.09,.205,0x283238);officeEllipsoid(body,side*.17,.075,.55,.113,.025,.207,0x162127);}}
+  else for(const side of[-1,1]){const leg=new THREE.Group();officeLimb(leg,[side*.145,-.025,0],[side*.155,-.39,.008],.112,navy,.086);officeLimb(leg,[side*.155,-.39,.008],[side*.16,-.71,.015],.085,navy,.06);officeEllipsoid(leg,side*.16,-.79,.075,.105,.085,.19,0x283238);officeEllipsoid(leg,side*.16,-.845,.08,.108,.023,.193,0x162127);const joint=bake(leg);joint.name=side<0?'character-left-leg':'character-right-leg';joint.position.y=.88;root.add(joint);}
+  // Sculpted jaw, small eyes, nose and lips keep a human silhouette at close range.
+  const skull=officeContour(head,[[0,-.258],[.085,-.25],[.145,-.21],[.185,-.12],[.207,0],[.205,.105],[.17,.2],[.1,.247],[0,.26]],.81,skin);skull.position.z=.006;
+  for(const side of[-1,1]){officeEllipsoid(head,side*.205,-.01,0,.036,.064,.035,skin);officeEllipsoid(head,side*.212,-.01,.023,.015,.038,.012,0xbe8366);officeEllipsoid(head,side*.083,.025,.158,.036,.018,.01,0xe9e4d8);officeEllipsoid(head,side*.081,.025,.172,.014,.016,.006,0x3f342f);officeEllipsoid(head,side*.081,.025,.179,.01,.014,.004,0x172229);officeEllipsoid(head,side*.077,.033,.183,.004,.005,.003,0xffffff);
+   officeCurve(head,[[side*.044,.075,.158],[side*.082,.086,.155],[side*.123,.069,.142]],.011,hair);
+   officeCurve(head,[[side*.039,.038,.166],[side*.083,.05,.17],[side*.126,.033,.15]],.004,0x785747);
+
+  }
+  officeEllipsoid(head,0,-.012,.17,.02,.055,.025,skin);officeEllipsoid(head,0,-.058,.189,.028,.023,.027,skin);
+  officeCurve(head,[[-.059,-.139,.14],[0,-.153,.174],[.059,-.139,.14]],.007,0x8c5547);officeEllipsoid(head,0,-.167,.157,.045,.012,.012,0xc98c75);
+  // Open hairline, swept fringe and layered locks replace the hardhat entirely.
+  const hairCap=mesh(head,new THREE.SphereGeometry(1,32,20,0,Math.PI*2,0,1.75),material(hair,.8),0,.085,-.015);hairCap.scale.set(.225,.205,.205);hairCap.rotation.z=0;for(let strand=0;strand<9;strand++){const phi=.15+strand*.34,points=[];for(const theta of[.2,.45,.75,1.05,1.35,1.65]){const sweep=phi+.2*theta;points.push([.226*Math.sin(theta)*Math.cos(sweep),.085+.206*Math.cos(theta),-.015+.206*Math.sin(theta)*Math.sin(sweep)]);}officeCurve(head,points,.0018,0x3e3430);}
+  if(female){officeEllipsoid(head,0,-.093,-.123,.199,.291,.094,hair);for(const side of[-1,1]){officeEllipsoid(head,side*.176,-.122,-.038,.058,.234,.092,hair);for(let strand=0;strand<3;strand++)officeCurve(head,[[side*(.15+strand*.013),.13,-.075],[side*(.197+strand*.005),-.08,-.035],[side*(.17+strand*.007),-.34,-.075]],.004,0x4c3b35);}}
+  else{for(const side of[-1,1])officeEllipsoid(head,side*.189,.019,-.039,.026,.094,.07,hair);}
+  const headPart=bake(head);headPart.name='character-head';headPart.position.y=1.998;root.add(bake(body),headPart);
+  for(const side of[-1,1]){const arm=new THREE.Group(),elbow=seated?[0,-.28,.24]:[side*.022,-.32,0],wrist=seated?[0,-.12,.6]:[side*.025,-.57,.015];officeLimb(arm,[0,0,0],elbow,.105,shirt,.079);officeLimb(arm,elbow,wrist,.075,shirt,.053);officeHand(arm,wrist[0],wrist[1]-.014,wrist[2]+(seated?.085:0),skin,seated,side);const joint=bake(arm);joint.name=side<0?'character-left-arm':'character-right-arm';joint.position.set(side*.328,1.55,0);joint.userData.baseArmX=0;root.add(joint);}
+  root.userData={isStaffCharacter:true,seated,female,seat,headwear:'none',referenceStyle:'smooth-office-human',labelHeight:2.4};officePrototypes.set(key,root);
+ }
+ return officePrototypes.get(key).clone();
+}
 export function animateCharacter(root,time,phase=0){const head=root.getObjectByName('character-head');if(head){head.rotation.y=Math.sin(time*.6+phase)*.035;head.rotation.z=Math.sin(time*.85+phase)*.013;}for(const side of['left','right']){const arm=root.getObjectByName('character-'+side+'-arm');if(arm)arm.rotation.x=(arm.userData.baseArmX||0)+Math.sin(time*(root.userData.seated?3.2:.7)+phase+(side==='left'?1:0))*(root.userData.seated?.025:.012);}}
 export function createDriver(){const driver=staffCharacter({clipboard:true});driver.add(contactShadow(1.65,1.2));return driver;}
 
@@ -141,8 +196,10 @@ export function createFleetGround(cols,rows,kind){
 }
 
 function chair(g,x,z,angle,pixel){
- const unit=new THREE.Group();unit.position.set(x,0,z);unit.rotation.y=angle;g.add(unit);box(unit,.71,.15,.66,0,.84,0,0x364247);box(unit,.72,.78,.12,0,1.27,-.32,0x3c494e);box(unit,.52,.51,.035,0,1.28,-.39,0x778186);cylinder(unit,.055,.075,.61,0,.49,0,0x545f61,pixel?6:12);
- for(const side of[-1,1]){box(unit,.08,.08,.55,side*.45,1.13,0,0x465156);box(unit,.05,.36,.05,side*.45,.96,.12,0x57636a);}for(let i=0;i<5;i++){const a=i*Math.PI*.4;box(unit,.06,.06,.48,Math.sin(a)*.2,.16,Math.cos(a)*.2,0x4a5559,[0,a,0]);cylinder(unit,.08,.08,.07,Math.sin(a)*.41,.09,Math.cos(a)*.41,0x283135,8,[Math.PI/2,0,0]);}
+ const unit=new THREE.Group();unit.position.set(x,0,z);unit.rotation.y=angle;g.add(unit);
+ const cushion=(w,h,d,x,y,z,color)=>pixel?box(unit,w,h,d,x,y,z,color):roundBox(unit,w,h,d,x,y,z,color,.055);
+ cushion(.71,.15,.66,0,.84,0,0x364247);cushion(.72,.78,.12,0,1.27,-.32,0x3c494e);cushion(.52,.51,.035,0,1.28,-.39,0x778186);cylinder(unit,.055,.075,.61,0,.49,0,0x545f61,pixel?6:24);
+ for(const side of[-1,1]){cushion(.08,.08,.55,side*.45,1.13,0,0x465156);box(unit,.05,.36,.05,side*.45,.96,.12,0x57636a);}for(let i=0;i<5;i++){const a=i*Math.PI*.4;box(unit,.06,.06,.48,Math.sin(a)*.2,.16,Math.cos(a)*.2,0x4a5559,[0,a,0]);cylinder(unit,.08,.08,.07,Math.sin(a)*.41,.09,Math.cos(a)*.41,0x283135,pixel?8:20,[Math.PI/2,0,0]);}
 }
 const workstationScreenMaterials=new Map();
 export function workstationScreen(state='off'){
@@ -150,8 +207,8 @@ export function workstationScreen(state='off'){
  if(typeof document==='undefined')mat=new THREE.MeshBasicMaterial({color:state==='off'?0x14202a:0x1266bd});else{const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;const c=canvas.getContext('2d');c.fillStyle=state==='off'?'#08131b':state==='idle'?'#172c3d':'#08264e';c.fillRect(0,0,512,256);if(state!=='off'){c.fillStyle='#f08b21';c.fillRect(0,0,512,28);c.fillStyle='#d8edff';c.font='bold 22px Segoe UI';c.fillText(state==='idle'?'ISTIRAHAT':'OCC  /  WORKSTATION',24,66);if(state==='on'){c.fillStyle='#246eab';for(let i=0;i<4;i++)c.fillRect(24+i*117,92,100,36);c.strokeStyle='#58c7bd';c.lineWidth=4;c.beginPath();for(let i=0;i<12;i++){const x=30+i*40,y=180+Math.sin(i*.8)*24;i?c.lineTo(x,y):c.moveTo(x,y);}c.stroke();}}const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;mat=new THREE.MeshBasicMaterial({map:texture,toneMapped:false});}workstationScreenMaterials.set(state,mat);return mat;
 }
 function monitor(g,x,z,angle=0){const unit=new THREE.Group();unit.position.set(x,1.46,z);unit.rotation.y=angle;g.add(unit);box(unit,.92,.55,.06,0,.42,0,0x222f37);const screen=mesh(unit,new THREE.PlaneGeometry(.81,.43),workstationScreen('off'),0,.43,.045);screen.userData={monitorScreen:true,keepDynamic:true};box(unit,.05,.28,.05,0,.06,0,0x3c484c);box(unit,.42,.035,.24,0,-.055,.03,0x46545a);box(unit,.7,.025,.25,0,-.06,.4,0x677174);}
-export function createOccWalker(seat=1){const person=OCC_TEAM.find(p=>p.seat===seat);return staffCharacter({seated:false,female:person?.gender==='female'});}
-export function createOccPerson(seat=1){const person=OCC_TEAM.find(p=>p.seat===seat);return staffCharacter({seated:true,female:person?.gender==='female'});}
+export function createOccWalker(seat=1){const person=OCC_TEAM.find(p=>p.seat===seat);return officeCharacter({seated:false,female:person?.gender==='female',seat});}
+export function createOccPerson(seat=1){const person=OCC_TEAM.find(p=>p.seat===seat);return officeCharacter({seated:true,female:person?.gender==='female',seat});}
 
 function workstation(g){
  box(g,2.64,.15,1.27,0,1.28,0,0xc7b397);box(g,2.64,.045,1.27,0,1.38,0,0xe0ceb0);box(g,2.46,.69,.08,0,.95,-.53,0x7f8983);
@@ -270,7 +327,7 @@ function makeRoom(pixel){
  }
  const micPositions=[...[-2.7,-.9,.9,2.7].map(x=>[x,-2.36]),...[-1,1].flatMap(side=>[-7.35,-5,-2.65].map(z=>[side*3.13,z]))];for(const[index,[x,z]]of micPositions.entries()){const code='T.MIC.'+String(index+1).padStart(2,'0');place('table-mic',x,1.4,z);record('table-mic-'+(index+1),'Mic stand '+code,'table-mic','audio',[x,1.76,z],[.5,.8,.5],{assetReference:code,zone:'meeting'});}
  place('kandao',0,0,-4.8);record('meeting-kandao','Kandao di pedestal tengah meja rapat','kandao','camera',[0,.99,-4.8],[1.55,2.03,1.55]);
- for(const[row,z,xs]of[[0,6.7,[-3,0,3]],[1,3.2,[-4.5,-1.5,1.5,4.5]]])for(const[column,x]of xs.entries()){
+ for(const[row,z,xs]of[[0,3.2,[-3,0,3]],[1,6.7,[-4.5,-1.5,1.5,4.5]]])for(const[column,x]of xs.entries()){
   const rowName=row===0?'front':'back',index=(row===0?0:3)+column+1,id='workstation-'+rowName+'-'+(column+1);const desk=place('desk',x,0,z);desk.traverse(node=>{if(node.userData.monitorScreen)node.userData.workstationId=id;});place('chair',x,0,z+1.12,Math.PI);
   record(id,'Meja workstation '+(row===0?'depan':'belakang')+' '+(column+1),'desk','workstation',[x,1.15,z],[2.68,2.28,1.5],{row:rowName,column:column+1,assetReference:index===8?'DRONE-PC':'CC-OPT'+index});
   record(id+'-chair','Kursi workstation '+(row===0?'depan':'belakang')+' '+(column+1),'chair','furniture',[x,.87,z+1.12],[1.03,1.8,1.05],{row:rowName,column:column+1,rotation:[0,Math.PI,0],zone:'workstation'});
