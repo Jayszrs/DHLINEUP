@@ -39,7 +39,7 @@ function helmet(parent){
 // Every clone shares buffers; color variation does not add extra draw calls.
 function bake(group){
  group.updateMatrixWorld(true);const batches=new Map(),surfaces=[];
- group.traverse(node=>{if(!node.isMesh)return;if(node.material.map||node.material.transparent){const surface=new THREE.Mesh(node.geometry,node.material);surface.applyMatrix4(node.matrixWorld);surface.userData={...node.userData};surfaces.push(surface);return;}const g=node.geometry.index?node.geometry.toNonIndexed():node.geometry.clone();g.applyMatrix4(node.matrixWorld);const key=[node.material.roughness,node.material.metalness].join(':');let batch=batches.get(key);if(!batch){batch={list:[],roughness:node.material.roughness,metalness:node.material.metalness};batches.set(key,batch);}batch.list.push({geometry:g,color:node.material.color,sourceColors:node.material.vertexColors?g.attributes.color?.array:null});});
+ group.traverse(node=>{if(!node.isMesh)return;if(node.material.map||node.material.transparent||node.userData.keepDynamic){const surface=new THREE.Mesh(node.geometry,node.material);surface.applyMatrix4(node.matrixWorld);surface.userData={...node.userData};surface.name=node.name;surfaces.push(surface);return;}const g=node.geometry.index?node.geometry.toNonIndexed():node.geometry.clone();g.applyMatrix4(node.matrixWorld);const key=[node.material.roughness,node.material.metalness].join(':');let batch=batches.get(key);if(!batch){batch={list:[],roughness:node.material.roughness,metalness:node.material.metalness};batches.set(key,batch);}batch.list.push({geometry:g,color:node.material.color,sourceColors:node.material.vertexColors?g.attributes.color?.array:null});});
  const result=new THREE.Group();
  for(const[key,batch]of batches){const count=batch.list.reduce((n,piece)=>n+piece.geometry.attributes.position.count,0),positions=new Float32Array(count*3),normals=new Float32Array(count*3),colors=new Float32Array(count*3);let offset=0;for(const{geometry:g,color,sourceColors}of batch.list){positions.set(g.attributes.position.array,offset);normals.set(g.attributes.normal.array,offset);if(sourceColors)colors.set(sourceColors,offset);else for(let i=offset;i<offset+g.attributes.position.array.length;i+=3){colors[i]=color.r;colors[i+1]=color.g;colors[i+2]=color.b;}offset+=g.attributes.position.array.length;g.dispose();}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(positions,3));g.setAttribute('normal',new THREE.BufferAttribute(normals,3));g.setAttribute('color',new THREE.BufferAttribute(colors,3));g.computeBoundingSphere();if(!bakedMaterials.has(key))bakedMaterials.set(key,new THREE.MeshStandardMaterial({vertexColors:true,roughness:batch.roughness,metalness:batch.metalness}));result.add(new THREE.Mesh(g,bakedMaterials.get(key)));}
  if(surfaces.length)result.add(...surfaces);return result;
@@ -110,7 +110,7 @@ function staffCharacter({seated=false,female=false,clipboard=false}={}){
   for(const side of[-1,1]){roundBox(body,.245,.19,.045,side*.195,1.39,.242,0x0a95b2,.025);sphere(body,.018,side*.195,1.43,.271,0xcbd4d1);roundBox(body,.18,.12,.035,side*.15,1.65,.17,0x13a4bc,.018,[0,0,side*.48]);}
   cylinder(body,.12,.13,.16,0,1.73,0,skin,16);roundBox(body,.7,.1,.46,0,.89,.01,navy,.03);roundBox(body,.15,.11,.035,0,.895,.257,0x7f8b8d,.02);
   if(seated){for(const side of[-1,1]){roundBox(body,.25,.18,.68,side*.18,.83,.22,navy,.065);roundBox(body,.25,.59,.23,side*.18,.49,.48,navy,.06);roundBox(body,.29,.19,.43,side*.18,.15,.58,0x303b42,.055);}}
-  else for(const side of[-1,1]){roundBox(body,.27,.65,.35,side*.18,.54,0,navy,.07);roundBox(body,.3,.23,.48,side*.18,.135,.06,0x303a40,.055);box(body,.31,.04,.49,side*.18,.035,.06,0x202b30);roundBox(body,.17,.22,.045,side*.31,.58,.06,0x2d415b,.018);}
+  else for(const side of[-1,1]){const leg=new THREE.Group();roundBox(leg,.27,.65,.35,side*.18,.54,0,navy,.07);roundBox(leg,.3,.23,.48,side*.18,.135,.06,0x303a40,.055);box(leg,.31,.04,.49,side*.18,.035,.06,0x202b30);roundBox(leg,.17,.22,.045,side*.31,.58,.06,0x2d415b,.018);const piece=bake(leg);piece.position.y=-.84;const joint=new THREE.Group();joint.name=side<0?'character-left-leg':'character-right-leg';joint.position.y=.84;joint.add(piece);root.add(joint);}
   dhBadge(body,.15,-.19,1.59,.235,0xf3a31a);
   roundBox(head,.65,.61,.54,0,0,.012,skin,.17);roundBox(head,.65,.28,.49,0,.18,-.065,0x343a3b,.11);for(const side of[-1,1]){roundBox(head,.07,.21,.12,side*.27,.06,.08,0x343a3b,.03);sphere(head,.065,side*.328,-.025,.015,skin,[.52,1,.76]);roundBox(head,.055,.095,.022,side*.13,.015,.287,0x192c32,.025);roundBox(head,.12,.025,.023,side*.13,.115,.269,0x4b3d30,.011,[0,0,side*.09]);}
   const smile=new THREE.QuadraticBezierCurve3(new THREE.Vector3(-.11,-.09,.278),new THREE.Vector3(0,-.205,.32),new THREE.Vector3(.11,-.09,.278));mesh(head,new THREE.TubeGeometry(smile,16,.013,6,false),material(0x64452f));
@@ -144,7 +144,13 @@ function chair(g,x,z,angle,pixel){
  const unit=new THREE.Group();unit.position.set(x,0,z);unit.rotation.y=angle;g.add(unit);box(unit,.71,.15,.66,0,.84,0,0x364247);box(unit,.72,.78,.12,0,1.27,-.32,0x3c494e);box(unit,.52,.51,.035,0,1.28,-.39,0x778186);cylinder(unit,.055,.075,.61,0,.49,0,0x545f61,pixel?6:12);
  for(const side of[-1,1]){box(unit,.08,.08,.55,side*.45,1.13,0,0x465156);box(unit,.05,.36,.05,side*.45,.96,.12,0x57636a);}for(let i=0;i<5;i++){const a=i*Math.PI*.4;box(unit,.06,.06,.48,Math.sin(a)*.2,.16,Math.cos(a)*.2,0x4a5559,[0,a,0]);cylinder(unit,.08,.08,.07,Math.sin(a)*.41,.09,Math.cos(a)*.41,0x283135,8,[Math.PI/2,0,0]);}
 }
-function monitor(g,x,z,angle=0){const unit=new THREE.Group();unit.position.set(x,1.46,z);unit.rotation.y=angle;g.add(unit);box(unit,.92,.55,.06,0,.42,0,0x222f37);box(unit,.81,.43,.013,0,.43,.038,0x507e83);box(unit,.05,.28,.05,0,.06,0,0x3c484c);box(unit,.42,.035,.24,0,-.055,.03,0x46545a);box(unit,.7,.025,.25,0,-.06,.4,0x677174);}
+const workstationScreenMaterials=new Map();
+export function workstationScreen(state='off'){
+ if(workstationScreenMaterials.has(state))return workstationScreenMaterials.get(state);let mat;
+ if(typeof document==='undefined')mat=new THREE.MeshBasicMaterial({color:state==='off'?0x14202a:0x1266bd});else{const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;const c=canvas.getContext('2d');c.fillStyle=state==='off'?'#08131b':state==='idle'?'#172c3d':'#08264e';c.fillRect(0,0,512,256);if(state!=='off'){c.fillStyle='#f08b21';c.fillRect(0,0,512,28);c.fillStyle='#d8edff';c.font='bold 22px Segoe UI';c.fillText(state==='idle'?'ISTIRAHAT':'OCC  /  WORKSTATION',24,66);if(state==='on'){c.fillStyle='#246eab';for(let i=0;i<4;i++)c.fillRect(24+i*117,92,100,36);c.strokeStyle='#58c7bd';c.lineWidth=4;c.beginPath();for(let i=0;i<12;i++){const x=30+i*40,y=180+Math.sin(i*.8)*24;i?c.lineTo(x,y):c.moveTo(x,y);}c.stroke();}}const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;mat=new THREE.MeshBasicMaterial({map:texture,toneMapped:false});}workstationScreenMaterials.set(state,mat);return mat;
+}
+function monitor(g,x,z,angle=0){const unit=new THREE.Group();unit.position.set(x,1.46,z);unit.rotation.y=angle;g.add(unit);box(unit,.92,.55,.06,0,.42,0,0x222f37);const screen=mesh(unit,new THREE.PlaneGeometry(.81,.43),workstationScreen('off'),0,.43,.045);screen.userData={monitorScreen:true,keepDynamic:true};box(unit,.05,.28,.05,0,.06,0,0x3c484c);box(unit,.42,.035,.24,0,-.055,.03,0x46545a);box(unit,.7,.025,.25,0,-.06,.4,0x677174);}
+export function createOccWalker(seat=1){const person=OCC_TEAM.find(p=>p.seat===seat);return staffCharacter({seated:false,female:person?.gender==='female'});}
 export function createOccPerson(seat=1){const person=OCC_TEAM.find(p=>p.seat===seat);return staffCharacter({seated:true,female:person?.gender==='female'});}
 
 function workstation(g){
@@ -157,9 +163,12 @@ function workstation(g){
 function meetingTable(g){
  for(const x of[-3.6,3.6]){box(g,1.4,.17,6.2,x,1.24,0,0xbda486);box(g,1.43,.055,6.24,x,1.355,0,0xdfc6a5);box(g,.09,1.12,5.8,x,.62,0,0x7c8780);for(const z of[-2.1,2.1])box(g,.83,.07,.44,x,.085,z,0x57635f);}
  box(g,8.63,.17,1.45,0,1.24,3.1,0xbda486);box(g,8.67,.055,1.47,0,1.355,3.1,0xdfc6a5);box(g,7.9,1.12,.1,0,.62,3.1,0x7c8780);
- for(const x of[-2.7,-.9,.9,2.7]){box(g,.55,.032,.34,x,1.42,3.25,0x425954);cylinder(g,.1,.12,.045,x,1.44,2.64,0x384c48,12);cylinder(g,.015,.015,.34,x,1.62,2.64,0x5a6e65,12,[.16,0,0]);}
- for(const side of[-1,1])for(const z of[-2.35,-.8,.8,2.35]){cylinder(g,.1,.12,.045,side*3.13,1.44,z,0x384c48,12);cylinder(g,.015,.015,.34,side*3.13,1.62,z,0x5a6e65,12,[0,0,-side*.16]);}
+ for(const x of[-2.7,-.9,.9,2.7]){box(g,.55,.032,.34,x,1.42,3.25,0x425954);}
+
  box(g,.58,.04,.38,2.74,1.43,3.1,0x33494d);box(g,.48,.012,.29,2.74,1.459,3.1,0x86a7a5);
+}
+function tableMic(g){
+ roundBox(g,.35,.085,.3,0,.055,0,0x2b393f,.035);roundBox(g,.22,.025,.16,0,.104,.01,0x46595f,.012);box(g,.06,.012,.04,.065,.121,.045,0x5aada3);const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,.1,-.06),new THREE.Vector3(0,.26,-.07),new THREE.Vector3(0,.51,-.04),new THREE.Vector3(0,.65,.09)]);mesh(g,new THREE.TubeGeometry(curve,14,.017,8,false),material(0x35474f));const capsule=sphere(g,.062,0,.66,.12,0x263840,[.8,.8,1.45]);capsule.rotation.x=.45;torus(g,.038,.007,0,.66,.17,0x899793,[Math.PI/2,0,0],16);
 }
 function kandao(g,pixel){
  cylinder(g,.68,.75,.09,0,.07,0,0x7d8982,pixel?12:32);cylinder(g,.12,.17,1.08,0,.63,0,0x69776f,pixel?10:24);cylinder(g,.57,.57,.11,0,1.22,0,0xbba78b,pixel?12:32);
@@ -226,6 +235,7 @@ export function createOccObject(type,pixel=true){
   else if(keyType==='kandao')kandao(g,pixel);
   else if(keyType==='ptz')ptz(g,pixel);
   else if(keyType==='speaker')speaker(g,pixel);
+  else if(keyType==='table-mic')tableMic(g);
   else if(keyType==='video-wall')videoWall(g);
   else if(keyType==='it-room'||keyType==='engineer-room')sideOffice(g,keyType==='it-room'?'IT':'ENGINEER',pixel);
   else throw new Error('Unknown OCC preview type: '+String(type));
@@ -258,19 +268,20 @@ function makeRoom(pixel){
  for(const[index,x]of[-2.7,-.9,.9,2.7].entries()){
   const id='meeting-chair-crossbar-'+(index+1);place('chair',x,0,-.58,Math.PI);record(id,'Kursi rapat penghubung '+(index+1),'chair','furniture',[x,.87,-.58],[1.03,1.8,1.05],{rotation:[0,Math.PI,0],zone:'meeting'});meetingSeats.push({id,side:'crossbar',position:[x,0,-.58],rotation:Math.PI});
  }
+ const micPositions=[...[-2.7,-.9,.9,2.7].map(x=>[x,-2.36]),...[-1,1].flatMap(side=>[-7.35,-5,-2.65].map(z=>[side*3.13,z]))];for(const[index,[x,z]]of micPositions.entries()){const code='T.MIC.'+String(index+1).padStart(2,'0');place('table-mic',x,1.4,z);record('table-mic-'+(index+1),'Mic stand '+code,'table-mic','audio',[x,1.76,z],[.5,.8,.5],{assetReference:code,zone:'meeting'});}
  place('kandao',0,0,-4.8);record('meeting-kandao','Kandao di pedestal tengah meja rapat','kandao','camera',[0,.99,-4.8],[1.55,2.03,1.55]);
  for(const[row,z,xs]of[[0,6.7,[-3,0,3]],[1,3.2,[-4.5,-1.5,1.5,4.5]]])for(const[column,x]of xs.entries()){
-  const rowName=row===0?'front':'back',index=(row===0?0:3)+column+1,id='workstation-'+rowName+'-'+(column+1);place('desk',x,0,z);place('chair',x,0,z+1.12,Math.PI);
+  const rowName=row===0?'front':'back',index=(row===0?0:3)+column+1,id='workstation-'+rowName+'-'+(column+1);const desk=place('desk',x,0,z);desk.traverse(node=>{if(node.userData.monitorScreen)node.userData.workstationId=id;});place('chair',x,0,z+1.12,Math.PI);
   record(id,'Meja workstation '+(row===0?'depan':'belakang')+' '+(column+1),'desk','workstation',[x,1.15,z],[2.68,2.28,1.5],{row:rowName,column:column+1,assetReference:index===8?'DRONE-PC':'CC-OPT'+index});
   record(id+'-chair','Kursi workstation '+(row===0?'depan':'belakang')+' '+(column+1),'chair','furniture',[x,.87,z+1.12],[1.03,1.8,1.05],{row:rowName,column:column+1,rotation:[0,Math.PI,0],zone:'workstation'});
   positions.push({id,row:rowName,column:column+1,position:[x,0,z],facing:'front-video-wall'});
-  const colleague=OCC_TEAM.find(person=>person.desk===id);if(colleague){const person=createOccPerson(colleague.seat,pixel);person.position.set(x,0,z+1.12);person.rotation.y=Math.PI;person.name='occ-person-'+colleague.seat;people.push(person);record('team-'+colleague.seat,colleague.seat+'. '+colleague.name,'person-'+colleague.seat,'team',[x,1.42,z+1.12],[1.05,1.5,1.02],{person:colleague,zone:'workstation'});}
+  const colleague=OCC_TEAM.find(person=>person.desk===id);if(colleague){const person=createOccPerson(colleague.seat,pixel);person.position.set(x,0,z+1.12);person.rotation.y=Math.PI;person.name='occ-person-'+colleague.seat;people.push(person);record('team-'+colleague.seat,colleague.seat+'. '+colleague.name,'person-'+colleague.seat,'team',[x,1.35,z+1.12],[1.2,2.7,1.25],{person:colleague,zone:'workstation'});}
 
  }
  for(const[column,x]of[-4.8,4.8].entries())for(const[row,z]of[-7,-1,6].entries()){
   const id='ceiling-speaker-'+(column*3+row+1);place('speaker',x,5.71,z);record(id,'Speaker plafon '+(column*3+row+1),'speaker','audio',[x,5.82,z],[.85,.28,.85]);
  }
- const result=bake(g);result.add(...people);result.userData={layout:'u-conference-table-and-seven-workstations-behind',sideRooms:{left:'IT',right:'Engineer',partition:'glass'},team:OCC_TEAM,workstationCount:7,workstationRows:[3,4],workstationPositions:positions,workstationChairCount:7,meetingChairCount:12,meetingChairSides:{left:4,crossbar:4,right:4},meetingChairPositions:meetingSeats,meetingTableCount:1,meetingTableShape:'rectangular-U-open-toward-video-wall',meetingTableParts:3,videoWallCount:1,videoWallContent:'illustrative-command-centre-display',kandaoCount:1,ptzCount:1,ceilingSpeakerCount:6,frontDirection:'negative-z',illustrativeLayout:true,roomSize:[24,6.45,21.6],roomBounds:{min:[-12,-.4,-10.1],max:[12,6.45,11.5]},objects,hotspotAnchors:{camera:[0,5.85,-9.03],audio:[-4.8,5.95,-1],display:[.3,4.7,-9.4],workstation:[4.5,2.35,6.5],control:[2.74,1.9,-1.9]}};return result;
+ const result=bake(g);result.add(...people);result.userData={layout:'u-conference-table-and-seven-workstations-behind',sideRooms:{left:'IT',right:'Engineer',partition:'glass'},team:OCC_TEAM,workstationCount:7,workstationRows:[3,4],workstationPositions:positions,workstationChairCount:7,meetingChairCount:12,meetingChairSides:{left:4,crossbar:4,right:4},meetingChairPositions:meetingSeats,meetingTableCount:1,meetingTableShape:'rectangular-U-open-toward-video-wall',meetingTableParts:3,videoWallCount:1,videoWallContent:'illustrative-command-centre-display',kandaoCount:1,ptzCount:1,ceilingSpeakerCount:6,tableMicCount:10,floor:32,frontDirection:'negative-z',illustrativeLayout:true,roomSize:[24,6.45,21.6],roomBounds:{min:[-12,-.4,-10.1],max:[12,6.45,11.5]},objects,hotspotAnchors:{camera:[0,5.85,-9.03],audio:[-4.8,5.95,-1],display:[.3,4.7,-9.4],workstation:[4.5,2.35,6.5],control:[2.74,1.9,-1.9]}};return result;
 }
 
 export function createOccRoom(pixel=true){const key=pixel?'pixel':'smooth';if(!roomPrototypes.has(key)){const room=makeRoom(pixel);for(const z of[3.2,6.7]){const shade=contactShadow(13,3.15);shade.position.set(0,.035,z+.4);room.add(shade);}for(const x of[-3.6,3.6]){const shade=contactShadow(3.4,8.2);shade.position.set(x,.035,-5);room.add(shade);}const crossbarShade=contactShadow(10,2.8);crossbarShade.position.set(0,.035,-1.9);room.add(crossbarShade);roomPrototypes.set(key,room);}return roomPrototypes.get(key).clone();}

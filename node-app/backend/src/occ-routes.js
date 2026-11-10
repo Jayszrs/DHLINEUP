@@ -28,10 +28,10 @@ export function occRoutes(app,view,url,upload){
  for(const page of Object.keys(labels))app.get('/'+page,async(req,res)=>{
   const filters=occFilters(req.query),data=await new OccRepository(req.db,req.user.id).data(filters);
   const team=page==='occ-dashboard'?await new OccTeam(req.db,req.user.id).all():[];
-  const meetingDay=date(req.query,'meeting_date',false)||currentDay(),meetings=page==='occ-dashboard'?await new OccMeetings(req.db,req.user.id).list(meetingDay):[];
+  const meetingDay=date(req.query,'meeting_date',false)||currentDay(),sceneMeetings=page==='occ-dashboard'?await new OccMeetings(req.db,req.user.id).listWindow(meetingDay):[],start=new Date(meetingDay+'T00:00:00+07:00').valueOf(),end=start+86400000,meetings=sceneMeetings.filter(m=>new Date(m.start_at).valueOf()<end&&new Date(m.end_at).valueOf()>start);
   const photoSetting=await one(req.db,"SELECT setting_value FROM fleetsync.app_settings WHERE setting_key='occ_photos_v1'");let manifest={};try{manifest=JSON.parse(photoSetting?.setting_value||'{}');}catch{}
   for(const asset of data.assets)asset.photo_count=manifest[driveReference(asset.photo_url)]?.length||0;
-  return view(req,res,'occ',{...defaults,label:labels[page],occPage:page,occFilters:filters,occAssets:data.assets,occAllAssets:data.allAssets,occCctv:data.cctv,occAvailability:data.availability,occSelectedCctv:data.selectedCctv,occSelectedInventory:data.selectedInventory,occSummary:data.summary,meetings,meetingDay,meetingTime,occTeam:team.map(({photo_path,own_photo,...person})=>({...person,photo:photo_path?url('occ-team-photo',{nik:person.nik,v:person.version}):'',href:canEditData(req.user)?url('occ-team-form',{nik:person.nik}):''}))});
+  return view(req,res,'occ',{...defaults,label:labels[page],occPage:page,occFilters:filters,occAssets:data.assets,occAllAssets:data.allAssets,occCctv:data.cctv,occAvailability:data.availability,occSelectedCctv:data.selectedCctv,occSelectedInventory:data.selectedInventory,occSummary:data.summary,meetings,sceneMeetings,meetingDay,meetingTime,occTeam:team.map(({photo_path,own_photo,...person})=>({...person,photo:photo_path?url('occ-team-photo',{nik:person.nik,v:person.version}):'',href:canEditData(req.user)?url('occ-team-form',{nik:person.nik}):''}))});
  });
  app.get('/occ-form',async(req,res)=>{
   requireEditor(req);const repo=new OccRepository(req.db,req.user.id),kind=formKind(req.query);let row;

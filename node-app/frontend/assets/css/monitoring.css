@@ -1,15 +1,11 @@
 /* Semantic metric colors and quiet gold outlines follow the owner's brief. */
 /* Metric surfaces now carry the same semantic color as their values. */
-.kpi.orange,.metric-card.orange{--metric-bg:#fae8d7;--metric-value:#914b0d;--metric-note:#74573e}
-.kpi.green,.metric-card.green{--metric-bg:#dcefe4;--metric-value:#176044;--metric-note:#456656}
-.kpi.amber,.metric-card.amber{--metric-bg:#f6eccb;--metric-value:#81530d;--metric-note:#716039}
-.kpi.blue,.metric-card.blue{--metric-bg:#deebf4;--metric-value:#2c5874;--metric-note:#4d6374}
-.kpi.red,.metric-card.red{--metric-bg:#f5e1e5;--metric-value:#98384c;--metric-note:#79515b}
-[data-theme=dark] .kpi.orange,[data-theme=dark] .metric-card.orange{--metric-bg:#433123;--metric-value:#f4c58e;--metric-note:#e0c7ad}
-[data-theme=dark] .kpi.green,[data-theme=dark] .metric-card.green{--metric-bg:#233e32;--metric-value:#98debb;--metric-note:#b4d3c1}
-[data-theme=dark] .kpi.amber,[data-theme=dark] .metric-card.amber{--metric-bg:#423a23;--metric-value:#e9d28b;--metric-note:#d6cba5}
-[data-theme=dark] .kpi.blue,[data-theme=dark] .metric-card.blue{--metric-bg:#243c4c;--metric-value:#b2d8ef;--metric-note:#bcd0df}
-[data-theme=dark] .kpi.red,[data-theme=dark] .metric-card.red{--metric-bg:#462d37;--metric-value:#f0b1c0;--metric-note:#ddbec8}
+/* Saturated primary surfaces: DH orange, movement green, yellow and blue. */
+.kpi.orange,.metric-card.orange{--metric-bg:#f28a1b;--metric-value:#162b3a;--metric-note:#223b44}
+.kpi.green,.metric-card.green{--metric-bg:#126746;--metric-value:#fff;--metric-note:#e3f6eb}
+.kpi.amber,.metric-card.amber{--metric-bg:#f2cb0a;--metric-value:#172a39;--metric-note:#334020}
+.kpi.blue,.metric-card.blue{--metric-bg:#105cc9;--metric-value:#fff;--metric-note:#e3eeff}
+.kpi.red,.metric-card.red{--metric-bg:#bd263f;--metric-value:#fff;--metric-note:#ffe8ed}
 .kpi strong,.metric-card strong,.kpi>span,.metric-card>span{color:var(--metric-value,var(--ink))!important}.kpi>small,.metric-card>small{color:var(--metric-note,var(--monitor-muted))!important}
 .scene-view-tools{position:absolute;z-index:6;top:14px;right:14px;display:flex;gap:5px;padding:5px;border:1px solid var(--monitor-outline);border-radius:8px;background:var(--surface)}
 .scene-view-tools button{min-width:40px;min-height:40px;padding:7px 10px;font-size:11px}
@@ -69,3 +65,7 @@
 .brand-wordmark.brand-occ-name{font-size:18px;line-height:1.17;letter-spacing:-.02em}.brand-signature:has(.brand-occ-name){align-items:center}
 .preview-person-profile{display:grid;justify-items:start;gap:7px;padding-bottom:20px;margin-bottom:14px;border-bottom:1px solid var(--line)}.preview-person-profile img{width:112px;height:112px;border-radius:10px;object-fit:cover}.preview-person-profile strong{font-size:15px;color:var(--ink)}.preview-person-profile p,.preview-person-profile small{color:var(--muted);font-size:12px;margin:0}.preview-person-initial{display:grid;place-items:center;width:80px;height:80px;border:1px solid var(--line);border-radius:10px;color:var(--accent);background:var(--surface-2);font-size:24px;font-weight:700}
 @media(max-width:700px){.occ-room-scene .fleet-viewport{min-height:400px;height:400px}.preview-person-profile{padding-bottom:14px;margin-bottom:6px}}
+
+.metric-card strong small,.kpi strong small{color:var(--metric-note)!important}
+.occ-simulation-controls{padding:20px 24px;border-bottom:1px solid var(--line);background:var(--surface)}.occ-simulation-heading{display:flex;align-items:start;justify-content:space-between;gap:20px}.occ-simulation-heading strong{font-size:14px}.occ-simulation-heading p{font-size:12px;color:var(--muted);max-width:75ch;margin:7px 0 17px;line-height:1.6}.room-period{padding:6px 10px;color:var(--ink);border:1px solid var(--line);border-radius:6px;font-size:12px}.room-clock-controls,.room-clock-controls form{display:flex;align-items:end;gap:10px;flex-wrap:wrap}.room-clock-controls label{display:grid;gap:6px;font-size:12px;color:var(--muted)}.room-clock-controls input{min-height:40px}.room-clock-controls .subtle-button{min-height:40px}.room-activity{font-size:13px;padding:12px 0;color:var(--ink)}.room-time-presets{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 18px}.room-time-presets button{font-size:12px;min-height:40px}.room-time-presets [aria-pressed=true]{background:#f28a1b;color:#142a3b;border-color:#ad6016}.room-agenda{display:grid;grid-template-columns:150px minmax(0,1fr) auto;align-items:center;gap:7px 14px;border-top:1px solid var(--line);padding-top:17px}.room-agenda>span{font-size:12px;color:var(--muted)}.room-agenda strong{font-size:14px;overflow-wrap:anywhere}.room-agenda a{font-size:12px}.meeting-room-preview{display:inline-block;background:transparent;border:0;padding:4px 0;margin:0 0 9px;cursor:pointer}.meeting-room-preview:hover{text-decoration:underline}
+@media(max-width:700px){.occ-simulation-controls{padding:18px}.occ-simulation-heading{gap:10px}.room-clock-controls{gap:12px}.room-clock-controls form{width:100%}.room-clock-controls form label{flex:1}.room-clock-controls input{min-width:0;width:100%}.room-time-presets{display:grid;grid-template-columns:1fr 1fr}.room-agenda{grid-template-columns:1fr}.room-agenda strong{font-size:14px}.room-activity{flex-basis:100%;padding:0}.room-period{flex-shrink:0}}
