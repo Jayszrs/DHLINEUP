@@ -76,8 +76,9 @@ export function readSpreadsheetTables(buffer,extension) {
   try{return document(buffer,extension,{allSheets:true,maxRows:200030});}
   catch(error){if(error instanceof HttpError)throw error;throw new HttpError(422,'File tidak dapat dibaca. Gunakan XLSX atau CSV yang valid.');}
 }
-export function readSpreadsheet(buffer,extension) {
+export function readSpreadsheet(buffer,extension,{fallbackShift='Belum ditentukan'}={}) {
   try {
+    if(!['Belum ditentukan','D','N'].includes(fallbackShift))throw new HttpError(422,'Shift impor tidak valid.');
     const data=document(buffer,extension);let mapping=null;const output=[];
     for(const [i,cells] of data.rows.entries()) {
       if(cells.length>100) throw new HttpError(422,'Maksimal 100 kolom per impor.');
@@ -91,7 +92,8 @@ export function readSpreadsheet(buffer,extension) {
       if(!cells.some(v=>String(v??'').trim())) continue;
       if(output.length>=5000) throw new HttpError(422,'Maksimal 5.000 baris data per impor.');
       const row={};mapping.forEach((field,index)=>{if(field) row[field]=String(cells[index]??'').trim();});
-      for(const [k,v] of Object.entries({site:'BCP',shift:'Belum ditentukan',type_category:'Belum diklasifikasi'})) row[k]||=v;
+      for(const [k,v] of Object.entries({site:'BCP',shift:fallbackShift,type_category:'Belum diklasifikasi'})) row[k]||=v;
+      const shiftAlias={d:'D',day:'D',dayshift:'D',n:'N',night:'N',nightshift:'N',nigthshift:'N'};row.shift=shiftAlias[normalize(row.shift)]||row.shift;
       for(const k of ['dh','mine','ftw']) {
         const value=(row[k]||'').toLowerCase();
         if(!['ya','yes','tidak','no','','belum dicek'].includes(value)) throw new HttpError(422,`Baris ${i+1}: status ${k} tidak valid.`);

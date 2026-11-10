@@ -191,15 +191,16 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
     const filters=validation.filters(req.query),data={filters};
     if(page==='lineup') {data.rows=await req.repo.lineups(filters);data.total=Number((await one(req.db,'SELECT count(*) AS n FROM fleetsync.lineups')).n);}
     if(page==='dashboard') {
-      data.historyRows=await req.repo.lineups({site:filters.site});
+      data.historyRows=await req.repo.lineups({site:filters.site,shift:filters.shift});
       filters.work_date=filters.work_date||validation.date(req.query,'scene_date',false)||'';
       data.rows=filters.work_date?data.historyRows.filter(row=>row.work_date===filters.work_date):data.historyRows;
       data.lineupSceneDate=filters.work_date||data.historyRows.at(-1)?.work_date||new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
       data.lineupSceneData=lineupFleet(data.historyRows,data.lineupSceneDate,url);
     }
+    if(page==='import')data.importShift=filters.shift==='All'?'Belum ditentukan':filters.shift;
     if(page==='master') data.rows=await req.repo.operators(filters);
     if(page==='detail') data.row=await req.repo.lineup(validation.text(req.query,'id',80,true));
-    if(page==='lineup-form') data.row=req.query.id?await req.repo.lineup(validation.text(req.query,'id',80,true)):validation.blankLineup();
+    if(page==='lineup-form'){data.row=req.query.id?await req.repo.lineup(validation.text(req.query,'id',80,true)):validation.blankLineup();if(!req.query.id){data.row.site=filters.site;data.row.work_date=filters.work_date||data.row.work_date;data.row.shift=filters.shift==='All'?data.row.shift:filters.shift;}}
     if(page==='operator-form') data.row=req.query.id?await req.repo.operator(validation.recordId(req.query,'id',true)):{id:'',version:0,site:'BCP',name:'',nik:'',unit:'',equipment:'',last_date:new Date().toISOString().slice(0,10)};
     if(page==='operator-form'&&!canEditData(req.user)) data.label='Profil Operator';
     if(page==='audit') data.rows=await req.repo.auditRows();
@@ -258,7 +259,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
           let file=req.files?.spreadsheet?.[0],extension=file?path.extname(file.originalname).slice(1).toLowerCase():'';
           if(req.body.spreadsheet_ticket) {const item=await req.storage.consume(tx,req.user,validation.text(req.body,'spreadsheet_ticket',64,true),'spreadsheet');temporary.push(item.temporaryPath);file={buffer:item.bytes};extension=item.extension;}
           if(!file) throw new validation.HttpError(422,'Pilih file XLSX/CSV maksimal 10 MB.');
-          const rows=readSpreadsheet(file.buffer,extension);let inserted=0,skipped=0;
+          const fallbackShift=validation.choice(req.body,'fallback_shift',validation.SHIFTS,'Belum ditentukan'),rows=readSpreadsheet(file.buffer,extension,{fallbackShift});let inserted=0,skipped=0;
           for(const row of rows) {if(await req.repo.insert(tx,row,undefined,{skipDuplicate:true})) inserted++;else skipped++;}
           await audit(tx,req.user.id,'import','lineup','',{inserted,skipped});message=`Impor selesai: ${inserted} data ditambahkan, ${skipped} duplikat dilewati.`;
         }
@@ -271,7 +272,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
       const values=Object.fromEntries(Object.entries(req.body).filter(([key,value])=>['name','username','nik','site'].includes(key)&&typeof value==='string'));
       if(action==='profile-save') return view(req,res,'profile',{values:{...req.user,...values},errorMessage,recoverySettings:await req.recovery.settings(req.user.id)});
       if(action==='account-create') return view(req,res,'accounts',{values,errorMessage,accounts:(await req.db.query('SELECT id,name,username,created_at,is_admin,must_change_password,can_edit_data FROM fleetsync.users ORDER BY created_at,id')).rows});
-      if(action==='import') return view(req,res,'import',{errorMessage});
+      if(action==='import') return view(req,res,'import',{errorMessage,importShift:validation.SHIFTS.includes(req.body.fallback_shift)?req.body.fallback_shift:'Belum ditentukan'});
       if(['lineup-save','operator-save'].includes(action)) {
         const isLineup=action==='lineup-save',safeKeys=isLineup?['site','work_date','shift','type_category','unit','equipment','equipment_kind','operator_name','nik','dh','mine','ftw','source_status','note']:['site','name','nik','unit','equipment','equipment_kind','last_date'];
         const id=validation.text(req.body,'id',80),base=id?await req.repo[isLineup?'lineup':'operator'](id):isLineup?validation.blankLineup():{id:'',version:0};

@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {createOccWalker,animateCharacter,workstationScreen} from './fleet-models.js';
+import {createOccWalker,animateCharacter,orientCharacter,workstationScreen} from './fleet-models.js';
 import {walkingRoute,routePosition,clockText,jakartaClock} from './occ-schedule.js';
 
 const palettes={morning:{sky:0xb8daf0,city:0x66879b,ambient:2.15,key:2.6,stage:'#f1f0eb'},day:{sky:0x94c5e6,city:0x66869b,ambient:2.5,key:3.1,stage:'#f1f0eb'},evening:{sky:0xdda47b,city:0x787c8a,ambient:1.8,key:2.4,stage:'#eee5dc'},night:{sky:0x0a1832,city:0x1d304c,ambient:.85,key:1.3,stage:'#111e30'}};
@@ -35,13 +35,13 @@ export function createOccActivity(room,{viewport,lights,team=[]}){
   for(const entry of people){
    if(state.activity==='off'||entry.inactive){entry.seated.visible=false;entry.walker.visible=false;entry.mode='off';entry.arrived=true;continue;}
    const wasOff=entry.mode==='off';entry.mode=state.activity;entry.travel=0;entry.delay=(entry.person.seat-1)*.45;entry.arrived=false;
-   if((!started||wasOff)&&state.activity!=='break'){if(state.activity==='meeting')routeFor(entry,'meeting');else entry.target.copy(entry.home);entry.seated.position.copy(entry.target);entry.seated.rotation.y=state.activity==='meeting'?entry.rotation:Math.PI;entry.current.copy(entry.target);entry.seated.visible=true;entry.walker.visible=false;entry.arrived=true;}
+   if((!started||wasOff)&&state.activity!=='break'){if(state.activity==='meeting')routeFor(entry,'meeting');else entry.target.copy(entry.home);entry.seated.position.copy(entry.target);orientCharacter(entry.seated,state.activity==='meeting'?entry.rotation:Math.PI);entry.current.copy(entry.target);entry.seated.visible=true;entry.walker.visible=false;entry.arrived=true;}
    else{entry.route=routeFor(entry,state.activity);entry.seated.visible=false;entry.walker.visible=true;}
   }started=true;
  }
  function update(time,dt,state,snap=false){setActivity(state);const positions=new Map();for(const entry of people){
   if(entry.mode==='off'){positions.set(entry.person.seat,{position:entry.home.toArray(),visible:false});continue;}
-  if(!entry.arrived){entry.delay=Math.max(0,(entry.delay||0)-dt);if(!entry.delay)entry.travel+=dt*1.45;const move=routePosition(entry.route,snap?Infinity:entry.travel);entry.walker.position.set(...move.position);entry.current.copy(entry.walker.position);entry.walker.rotation.y=move.heading;for(const side of['left','right']){const leg=entry.walker.getObjectByName('character-'+side+'-leg');if(leg)leg.rotation.x=Math.sin(time*7+(side==='left'?0:Math.PI))*.4;}animateCharacter(entry.walker,time,entry.person.seat);for(const side of['left','right']){const arm=entry.walker.getObjectByName('character-'+side+'-arm');if(arm)arm.rotation.x=Math.sin(time*7+(side==='left'?Math.PI:0))*.22;}if(move.done){if(entry.mode==='break'){entry.route=[move.position,[entry.target.x+(entry.target.x<0?-.3:.3),0,entry.target.z],entry.target.toArray()];entry.travel=0;}else{entry.arrived=true;entry.walker.visible=false;entry.seated.visible=true;entry.seated.position.copy(entry.target);entry.seated.rotation.y=entry.rotation;entry.current.copy(entry.target);}}}
+  if(!entry.arrived){entry.delay=Math.max(0,(entry.delay||0)-dt);if(!entry.delay)entry.travel+=dt*1.45;const move=routePosition(entry.route,snap?Infinity:entry.travel);entry.walker.position.set(...move.position);entry.current.copy(entry.walker.position);orientCharacter(entry.walker,move.heading);for(const side of['left','right']){const leg=entry.walker.getObjectByName('character-'+side+'-leg');if(leg)leg.rotation.x=Math.sin(time*7+(side==='left'?0:Math.PI))*.4;}animateCharacter(entry.walker,time,entry.person.seat);for(const side of['left','right']){const arm=entry.walker.getObjectByName('character-'+side+'-arm');if(arm)arm.rotation.x=Math.sin(time*7+(side==='left'?Math.PI:0))*.22;}if(move.done){if(entry.mode==='break'){entry.route=[move.position,[entry.target.x+(entry.target.x<0?-.3:.3),0,entry.target.z],entry.target.toArray()];entry.travel=0;}else{entry.arrived=true;entry.walker.visible=false;entry.seated.visible=true;entry.seated.position.copy(entry.target);orientCharacter(entry.seated,entry.rotation);entry.current.copy(entry.target);}}}
   else animateCharacter(entry.seated,time,entry.person.seat);
   positions.set(entry.person.seat,{position:entry.current.toArray(),visible:true});
  }return positions;}

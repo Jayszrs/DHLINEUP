@@ -72,3 +72,5 @@
 
 .dashboard-filter{align-items:flex-end;gap:12px}.dashboard-filter .site-filter{flex-direction:column;align-items:flex-start;gap:6px}.dashboard-filter>label{min-width:120px;max-width:240px}.dashboard-filter .muted{flex-basis:100%}.kpi>span{min-height:2.9em}
 @media(max-width:600px){.dashboard-filter>label{flex:1 1 160px;max-width:none}.dashboard-filter .muted{margin-top:2px}}
+
+.night-shift-empty{margin-bottom:20px;padding:20px}.night-shift-empty h3{margin:0 0 8px}.night-shift-empty p{margin:0 0 16px}.night-shift-empty .subtle-button{margin-left:8px}
