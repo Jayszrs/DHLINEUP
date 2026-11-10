@@ -1,7 +1,8 @@
-import { unzipSync, zipSync, strToU8, strFromU8 } from 'fflate';
+import { unzipSync, strFromU8 } from 'fflate';
 import { XMLParser } from 'fast-xml-parser';
 import { parse } from 'csv-parse/sync';
 import path from 'node:path';
+import {reportWorkbook} from './report-workbook.js';
 import { HttpError, lineup } from './validation.js';
 
 export const HEADERS = ['Tanggal','Site','Shift','Type','Kode Alat','Tipe Alat','Nama Operator','NIK Operator','DH Line Up','Mine Dispatch','FTW Terisi','Status Sumber','Catatan','Jenis Alat'];
@@ -108,16 +109,6 @@ export function exportRows(rows,kind='lineup') {
   const master=kind==='master',fields=master?['site','name','nik','unit','equipment','last_date','equipment_kind']:FIELDS;
   return [master?['Site','Nama Operator','NIK','Unit Terakhir','Tipe Alat','Tanggal Terakhir','Jenis Alat']:HEADERS,...rows.map(row=>fields.map(k=>String(row[k]??'')))];
 }
-const escapeXml=value=>String(value).replace(/[^\u0009\u000a\u000d\u0020-\ud7ff\ue000-\ufffd\u{10000}-\u{10ffff}]/gu,'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]));
-function col(i) { let value='';for(i++;i;i=Math.floor((i-1)/26)) value=String.fromCharCode(65+(i-1)%26)+value;return value; }
-export function xlsx(rows) {
-  const parts={
-    '[Content_Types].xml':'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
-    '_rels/.rels':'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
-    'xl/workbook.xml':'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Line Up" sheetId="1" r:id="rId1"/></sheets></workbook>',
-    'xl/_rels/workbook.xml.rels':'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>',
-    'xl/worksheets/sheet1.xml':'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" state="frozen"/></sheetView></sheetViews><sheetData>'+rows.map((row,i)=>`<row r="${i+1}">`+row.map((v,j)=>`<c r="${col(j)}${i+1}" t="inlineStr"><is><t xml:space="preserve">${escapeXml(v)}</t></is></c>`).join('')+'</row>').join('')+`</sheetData><autoFilter ref="A1:${col(rows[0].length-1)}${rows.length}"/></worksheet>`,
-  };
-  return Buffer.from(zipSync(Object.fromEntries(Object.entries(parts).map(([k,v])=>[k,strToU8('<?xml version="1.0" encoding="UTF-8"?>'+v)]))));
-}
+export function xlsx(rows,options={}) { return reportWorkbook([{name:options.name||'Line Up',rows,...options}]); }
+
 export function csv(rows) { return '\uFEFF'+rows.map(row=>row.map(v=>'"'+(/^[\s]*[=+@-]/.test(String(v))?"'":'')+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n')+'\r\n'; }

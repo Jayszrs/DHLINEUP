@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import {OCC_TEAM} from './occ-team.js';
 
 const materials=new Map(),geometries=new Map(),bakedMaterials=new Map();
 function material(color,roughness=.65,metalness=.05){const key=[color,roughness,metalness].join(':');if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness,metalness}));return materials.get(key);}
@@ -111,6 +112,18 @@ function chair(g,x,z,angle,pixel){
  for(const side of[-1,1]){box(unit,.08,.08,.55,side*.45,1.13,0,0x465156);box(unit,.05,.36,.05,side*.45,.96,.12,0x57636a);}for(let i=0;i<5;i++){const a=i*Math.PI*.4;box(unit,.06,.06,.48,Math.sin(a)*.2,.16,Math.cos(a)*.2,0x4a5559,[0,a,0]);cylinder(unit,.08,.08,.07,Math.sin(a)*.41,.09,Math.cos(a)*.41,0x283135,8,[Math.PI/2,0,0]);}
 }
 function monitor(g,x,z,angle=0){const unit=new THREE.Group();unit.position.set(x,1.46,z);unit.rotation.y=angle;g.add(unit);box(unit,.92,.55,.06,0,.42,0,0x222f37);box(unit,.81,.43,.013,0,.43,.038,0x507e83);box(unit,.05,.28,.05,0,.06,0,0x3c484c);box(unit,.42,.035,.24,0,-.055,.03,0x46545a);box(unit,.7,.025,.25,0,-.06,.4,0x677174);}
+const colleaguePrototypes=new Map();
+export function createOccPerson(seat=1,pixel=true){
+ const key=seat+':'+pixel;if(!colleaguePrototypes.has(key)){
+  const g=new THREE.Group(),shirt=seat<=2?0xede7dc:seat<=4?0xb6c8c9:0x76969c;
+  box(g,.62,.62,.35,0,1.25,0,shirt);box(g,.045,.56,.018,0,1.25,.185,0xf5f0e3);box(g,.13,.18,.025,-.17,1.34,.19,0x345c68);
+  cylinder(g,.1,.105,.12,0,1.61,0,0xc5a285,12);sphere(g,.245,0,1.85,.015,0xc5a285,[1,1.13,.94]);sphere(g,.25,0,1.99,-.035,0x29373a,[1,.62,.9]);
+  for(const x of[-.085,.085])sphere(g,.019,x,1.86,.235,0x24353d,[1,1,.5]);box(g,.07,.012,.014,0,1.75,.233,0x8c6255);
+  for(const side of[-1,1]){box(g,.23,.17,.66,side*.17,.89,.2,0x354650);box(g,.22,.62,.2,side*.17,.56,.47,0x354650);box(g,.24,.14,.42,side*.17,.19,.57,0x27383e);box(g,.19,.4,.23,side*.4,1.22,.035,shirt,[.3,0,side*.12]);box(g,.18,.18,.46,side*.4,1.06,.31,shirt);sphere(g,.095,side*.4,1.05,.56,0xc5a285,[1,.6,1]);}
+  const person=bake(g);person.userData={seat,illustrativePerson:true};colleaguePrototypes.set(key,person);
+ }return colleaguePrototypes.get(key).clone();
+}
+
 function workstation(g){
  box(g,2.64,.15,1.27,0,1.28,0,0xc7b397);box(g,2.64,.045,1.27,0,1.38,0,0xe0ceb0);box(g,2.46,.69,.08,0,.95,-.53,0x7f8983);
  for(const side of[-1,1]){box(g,.09,1.22,.88,side*1.12,.62,0,0x556662);box(g,.36,.05,.94,side*1.12,.08,0,0x3b4e4b);}
@@ -153,7 +166,7 @@ function occScreenMaterial(){
   c.strokeStyle='#dfac48';c.lineWidth=3;c.beginPath();c.moveTo(x+45,285);c.lineTo(x+160,230);c.lineTo(x+245,264);c.lineTo(x+390,166);c.lineTo(x+505,210);c.stroke();
   for(let i=0;i<5;i++){const px=x+75+i*98,py=164+Math.sin(i*1.4)*55;c.fillStyle='#a2cfeb';c.beginPath();c.arc(px,py,7,0,Math.PI*2);c.fill();}
   for(let i=0;i<4;i++){const px=x+572+(i%2)*158,py=84+Math.floor(i/2)*134;c.fillStyle=i%2?'#4c2768':'#22385e';c.fillRect(px,py,148,124);c.fillStyle='#354d65';c.fillRect(px+10,py+8,128,64);c.fillStyle='#d7b69b';c.beginPath();c.arc(px+74,py+42,16,0,Math.PI*2);c.fill();c.fillStyle=i%2?'#5f8a8d':'#7287ad';c.beginPath();c.ellipse(px+74,py+87,32,27,0,0,Math.PI*2);c.fill();c.fillStyle='#cadbe8';c.fillRect(px+13,py+109,90,3);}
-  c.fillStyle='#13314d';c.fillRect(x+12,354,876,32);c.fillStyle='#b9d1e0';c.font='14px Segoe UI';c.fillText('ILUSTRASI TAMPILAN OCC  ·  BUKAN SIARAN LANGSUNG',x+25,376);
+  c.fillStyle='#13314d';c.fillRect(x+12,354,876,32);c.fillStyle='#b9d1e0';c.font='14px Segoe UI';c.fillText('ILUSTRASI TAMPILAN OCC  Â·  BUKAN SIARAN LANGSUNG',x+25,376);
  }
  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;screenMaterial=new THREE.MeshBasicMaterial({map:texture,toneMapped:false});return screenMaterial;
 }
@@ -183,6 +196,7 @@ export function createOccObject(type,pixel=true){
  const aliases={'workstation':'desk','conference-table':'meeting-table','camera':'kandao','screen':'video-wall'},keyType=aliases[type]||type,key=keyType+':'+(pixel?'pixel':'smooth');
  if(!objectPrototypes.has(key)){const g=new THREE.Group();
   if(keyType==='desk')workstation(g);
+  else if(keyType.startsWith('person-')){g.add(createOccPerson(Number(keyType.slice(7)),pixel));chair(g,0,0,0,pixel);}
   else if(keyType==='chair')chair(g,0,0,0,pixel);
   else if(keyType==='meeting-table')meetingTable(g);
   else if(keyType==='kandao')kandao(g,pixel);
@@ -211,9 +225,9 @@ function makeRoom(pixel){
  place('video-wall',0,1.75,-9.43);record('front-video-wall','Videotron ruang OCC','video-wall','display',[0,3.33,-9.4],[12.6,3.1,.4]);
  place('ptz',0,4.96,-9.12);record('front-ptz','Kamera PTZ di atas videotron','ptz','camera',[0,5.48,-9.03],[.75,1.06,.72]);
  place('meeting-table',0,0,-5);
- record('meeting-table-left','Meja rapat U · sisi kiri','meeting-table','furniture',[-3.6,.93,-5],[1.5,1.9,6.3],{part:'left'});
- record('meeting-table-crossbar','Meja rapat U · penghubung belakang','meeting-table','furniture',[0,.93,-1.9],[8.7,1.9,1.5],{part:'crossbar'});
- record('meeting-table-right','Meja rapat U · sisi kanan','meeting-table','furniture',[3.6,.93,-5],[1.5,1.9,6.3],{part:'right'});
+ record('meeting-table-left','Meja rapat U Â· sisi kiri','meeting-table','furniture',[-3.6,.93,-5],[1.5,1.9,6.3],{part:'left'});
+ record('meeting-table-crossbar','Meja rapat U Â· penghubung belakang','meeting-table','furniture',[0,.93,-1.9],[8.7,1.9,1.5],{part:'crossbar'});
+ record('meeting-table-right','Meja rapat U Â· sisi kanan','meeting-table','furniture',[3.6,.93,-5],[1.5,1.9,6.3],{part:'right'});
  for(const side of[-1,1])for(const[index,z]of[-7.3,-5.7,-4.1,-2.5].entries()){
   const x=side*5.1,rotation=side<0?Math.PI/2:-Math.PI/2,id='meeting-chair-'+(side<0?'left':'right')+'-'+(index+1);place('chair',x,0,z,rotation);record(id,'Kursi rapat '+(side<0?'kiri':'kanan')+' '+(index+1),'chair','furniture',[x,.87,z],[1.03,1.8,1.05],{rotation:[0,rotation,0],zone:'meeting'});meetingSeats.push({id,side:side<0?'left':'right',position:[x,0,z],rotation});
  }
@@ -226,11 +240,13 @@ function makeRoom(pixel){
   record(id,'Meja workstation '+(row===0?'depan':'belakang')+' '+(column+1),'desk','workstation',[x,1.15,z],[2.68,2.28,1.5],{row:rowName,column:column+1,assetReference:index===8?'DRONE-PC':'CC-OPT'+index});
   record(id+'-chair','Kursi workstation '+(row===0?'depan':'belakang')+' '+(column+1),'chair','furniture',[x,.87,z+1.12],[1.03,1.8,1.05],{row:rowName,column:column+1,rotation:[0,Math.PI,0],zone:'workstation'});
   positions.push({id,row:rowName,column:column+1,position:[x,0,z],facing:'front-video-wall'});
+  const colleague=OCC_TEAM.find(person=>person.desk===id);if(colleague){const person=createOccPerson(colleague.seat,pixel);person.position.set(x,0,z+1.12);person.rotation.y=Math.PI;g.add(person);record('team-'+colleague.seat,colleague.seat+'. '+colleague.name,'person-'+colleague.seat,'team',[x,1.42,z+1.12],[1.05,1.5,1.02],{person:colleague,zone:'workstation'});}
+
  }
  for(const[column,x]of[-4.8,4.8].entries())for(const[row,z]of[-7,-1,6].entries()){
   const id='ceiling-speaker-'+(column*3+row+1);place('speaker',x,5.71,z);record(id,'Speaker plafon '+(column*3+row+1),'speaker','audio',[x,5.82,z],[.85,.28,.85]);
  }
- const result=bake(g);result.userData={layout:'u-conference-table-and-eight-workstations-behind',sideRooms:{left:'IT',right:'Engineer',partition:'glass'},workstationCount:8,workstationRows:[4,4],workstationPositions:positions,workstationChairCount:8,meetingChairCount:12,meetingChairSides:{left:4,crossbar:4,right:4},meetingChairPositions:meetingSeats,meetingTableCount:1,meetingTableShape:'rectangular-U-open-toward-video-wall',meetingTableParts:3,videoWallCount:1,videoWallContent:'illustrative-command-centre-display',kandaoCount:1,ptzCount:1,ceilingSpeakerCount:6,frontDirection:'negative-z',illustrativeLayout:true,roomSize:[24,6.45,21.6],roomBounds:{min:[-12,-.4,-10.1],max:[12,6.45,11.5]},objects,hotspotAnchors:{camera:[0,5.85,-9.03],audio:[-4.8,5.95,-1],display:[.3,4.7,-9.4],workstation:[4.5,2.35,6.5],control:[2.74,1.9,-1.9]}};return result;
+ const result=bake(g);result.userData={layout:'u-conference-table-and-eight-workstations-behind',sideRooms:{left:'IT',right:'Engineer',partition:'glass'},team:OCC_TEAM,workstationCount:8,workstationRows:[4,4],workstationPositions:positions,workstationChairCount:8,meetingChairCount:12,meetingChairSides:{left:4,crossbar:4,right:4},meetingChairPositions:meetingSeats,meetingTableCount:1,meetingTableShape:'rectangular-U-open-toward-video-wall',meetingTableParts:3,videoWallCount:1,videoWallContent:'illustrative-command-centre-display',kandaoCount:1,ptzCount:1,ceilingSpeakerCount:6,frontDirection:'negative-z',illustrativeLayout:true,roomSize:[24,6.45,21.6],roomBounds:{min:[-12,-.4,-10.1],max:[12,6.45,11.5]},objects,hotspotAnchors:{camera:[0,5.85,-9.03],audio:[-4.8,5.95,-1],display:[.3,4.7,-9.4],workstation:[4.5,2.35,6.5],control:[2.74,1.9,-1.9]}};return result;
 }
 
 export function createOccRoom(pixel=true){const key=pixel?'pixel':'smooth';if(!roomPrototypes.has(key)){const room=makeRoom(pixel);for(const z of[3.2,6.7]){const shade=contactShadow(13,3.15);shade.position.set(0,.035,z+.4);room.add(shade);}for(const x of[-3.6,3.6]){const shade=contactShadow(3.4,8.2);shade.position.set(x,.035,-5);room.add(shade);}const crossbarShade=contactShadow(10,2.8);crossbarShade.position.set(0,.035,-1.9);room.add(crossbarShade);roomPrototypes.set(key,room);}return roomPrototypes.get(key).clone();}

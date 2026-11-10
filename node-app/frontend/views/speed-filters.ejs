@@ -4,3 +4,5 @@
 <% if(speedPage==='speed-units') { %><label>Cari unit<input name="search" placeholder="Ketik nomor DT" value="<%= speedFilters.search %>"></label><% } %>
 <button class="btn primary" type="submit">Terapkan</button><a class="subtle-button" href="<%= url(speedPage,speedPage==='speed-unit'?{unit:speedFilters.unit}:{}) %>">Reset</a>
 </form>
+<p class="speed-applied-period" role="status"><strong>Periode diterapkan:</strong> <%= speedFilters.from?dateId(speedFilters.from):'Awal data' %> — <%= speedFilters.to?dateId(speedFilters.to):'Akhir data' %> · <%= speedDaily.length %> tanggal · <%= speedSummary.active_units||0 %> DT berdata. Ekspor mengikuti periode ini.</p>
+<% if(Number(speedSummary.anomaly_count)>0||Number(speedSummary.pending_count)>0) { %><p class="speed-quality-note">Hanya speed di bawah 80 km/jam masuk perhitungan. <strong><%= speedNumber(speedSummary.anomaly_count,0) %></strong> pembacaan anomali dikeluarkan; <strong><%= speedNumber(speedSummary.pending_count,0) %></strong> catatan sumber belum dapat dihitung ulang karena GPS lengkap belum tersedia. Angka asli ada di sheet Verifikasi sumber pada ekspor.</p><% } %>

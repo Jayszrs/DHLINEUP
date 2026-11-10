@@ -6,6 +6,9 @@ import {SpeedImporter} from './speed-import.js';
 import {speedPeriods} from './speed-periods.js';
 import {speedFleet} from './fleet-data.js';
 import {loadSpeedMap} from './speed-map.js';
+import {speedExport} from './speed-export.js';
+import {rebuildSpeedQuality} from './speed-quality.js';
+import {choice} from './validation.js';
 const labels={'speed-dashboard':'Dashboard Speed','speed-daily':'Rekap Harian','speed-monthly':'Rekap Bulanan','speed-units':'Daftar Unit','speed-unit':'Laporan Speed Unit'};
 export function speedRoutes(app,view,url,upload) {
  const archives=new WeakMap();
@@ -29,7 +32,7 @@ export function speedRoutes(app,view,url,upload) {
  });
  app.post('/speed-import-apply',async(req,res)=>{
   requireEditor(req);req.auth.csrf(req);
-  try{if(req.body.confirm_replace!=='1')throw new HttpError(422,'Konfirmasi bahwa file memuat data lengkap untuk setiap DT/tanggal yang diperbarui.');const result=await importer(req).apply(text(req.body,'job',64,true));await req.auth.flash(req,result.already?'Impor ini sudah tersimpan. Data tidak digandakan.':`Impor speed selesai: ${result.added} rekap ditambahkan, ${result.replaced} diperbarui. Tanggal lain tetap tersimpan.`);return res.redirect(303,url('speed-dashboard'));}
+  try{if(req.body.confirm_replace!=='1')throw new HttpError(422,'Konfirmasi bahwa file memuat data lengkap untuk setiap DT/tanggal yang diperbarui.');const result=await importer(req).apply(text(req.body,'job',64,true));await rebuildSpeedQuality(req.db,sourceFiles(req.storage));await req.auth.flash(req,result.already?'Impor ini sudah tersimpan. Data tidak digandakan.':`Impor speed selesai: ${result.added} rekap ditambahkan, ${result.replaced} diperbarui. Tanggal lain tetap tersimpan.`);return res.redirect(303,url('speed-dashboard'));}
   catch(error){if(!error.status)throw error;res.status(error.status);return importView(req,res,null,{errorMessage:error.message});}
  });
  for(const page of Object.keys(labels))app.get('/'+page,async(req,res)=>{
@@ -51,5 +54,9 @@ export function speedRoutes(app,view,url,upload) {
   try{const unit=await repo[action==='speed-save'?'save':'delete'](req.body);await req.auth.flash(req,action==='speed-save'?'Rekap speed berhasil disimpan.':'Rekap speed berhasil dihapus.');res.redirect(303,url('speed-unit',{unit}));}
   catch(error){if(!error.status)throw error;res.status(error.status);return view(req,res,'speed-form',{label:'Periksa Rekap Speed',speedPage:'speed-form',speedUnits:await repo.units(),row:Object.fromEntries(['unit','work_date','version','total_count','moving_count','speed_sum','max_speed'].map(k=>[k,typeof req.body[k]==='string'?req.body[k]:''])),errorMessage:error.message});}
  });
- app.get('/speed-export',async(req,res)=>{const repo=new SpeedRepository(req.db,req.user.id),filters=speedFilters(req.query),kind=text(req.query,'kind',20)||'daily';let rows,first;if(kind==='units'){rows=await repo.units(filters);first='Unit';}else if(kind==='monthly'){rows=await repo.monthly(filters);first='Bulan';}else{rows=await repo.daily(filters);first='Tanggal';}const output=[[first,'Catatan','Bergerak','Berhenti (0)','Jumlah Speed','Rata-rata Semua','Rata-rata Bergerak','Speed Tertinggi','% Bergerak'],...rows.map(r=>[r.unit||r.month||r.work_date,r.total_count,r.moving_count,r.stopped_count,r.speed_sum,r.average??'',r.moving_average??'',r.max_speed??'',r.moving_ratio??''])];res.attachment('DHOCC_Speed_'+kind+'.csv').type('text/csv; charset=utf-8').send(csv(output));});
+ app.get('/speed-export',async(req,res)=>{
+  const repo=new SpeedRepository(req.db,req.user.id),filters=speedFilters(req.query),kind=choice(req.query,'kind',['daily','monthly','units'],'daily'),format=choice(req.query,'format',['xlsx','csv'],'xlsx');
+  const output=await speedExport(repo,filters,kind),filename=`DHOCC_Speed_${kind}_${filters.from||'awal'}_${filters.to||'akhir'}.${format}`;
+  res.attachment(filename).type(format==='csv'?'text/csv; charset=utf-8':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(format==='csv'?csv(output.csvRows):output.bytes);
+ });
 }

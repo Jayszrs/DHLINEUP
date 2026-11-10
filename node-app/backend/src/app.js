@@ -174,7 +174,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
   app.get('/export',async(req,res)=>{
     const filters=validation.filters(req.query),kind=validation.choice(req.query,'kind',['lineup','master','template'],'lineup'),format=validation.choice(req.query,'format',['xlsx','csv'],'xlsx');
     const rows=kind==='template'?[HEADERS]:exportRows(kind==='master'?await req.repo.operators(filters):await req.repo.lineups(filters),kind);
-    res.attachment(`DHOCC_${kind}.${format}`).type(format==='csv'?'text/csv; charset=utf-8':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(format==='csv'?csv(rows):xlsx(rows));
+    res.attachment(`DHOCC_${kind}.${format}`).type(format==='csv'?'text/csv; charset=utf-8':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(format==='csv'?csv(rows):xlsx(rows,kind==='template'?{}:{name:kind==='master'?'Operator':'DH Line Up',title:kind==='master'?'DHOCC · Operator':'DHOCC · DH Line Up',subtitle:`Site ${filters.site} · ${filters.work_date||'Semua tanggal'} · ${rows.length-1} baris`,note:'Ekspor seluruh hasil sesuai filter aktif. Nomor identitas disimpan sebagai teks.'}));
   });
   app.get('/dokumentasi',(_req,res)=>res.redirect(303,url('lineup')));
   speedRoutes(app,view,url,upload);
