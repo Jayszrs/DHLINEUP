@@ -33,3 +33,11 @@ The model factory supplies unit plates from the actual selected DT code. Its sha
 The room date is independent of the inventory inspection date. The backend reads existing meeting records in a seven-day window for the display, while the meeting list still shows only records overlapping the selected calendar day. No meetings, attendance records, device states or inventory rows are created by simulation controls. Meeting titles and HTTPS links come from saved records. The diorama does not imply actual attendance or real device power telemetry.
 
 The front workstation row is physically nearer the videotron/conference area (three desks at z=3.2); the rear row is nearer the entrance (four desks at z=6.7). Office staff use a dedicated smooth, helmet-free model for seated and walking states, including all previews. Mine-driver PPE is unchanged. Canonical team desk IDs, actual uploaded portraits, and source asset counts are preserved.
+
+## Dashboard date and asset revisions
+
+Dashboard `work_date` filters the headline cards, checks and selected driver scene. Historical rows are retained separately for periods and the eight-day trend, always bounded by the selected date. Legacy `scene_date` links remain supported; the explicit report date takes precedence. An empty selected day never falls back to the latest nonempty date. The reset shows all dates.
+
+`prepare-assets.js` fingerprints source scripts, styles and templates, exports the version with generated templates, and versions relative module imports in the published asset graph. Entry JS/CSS URLs carry the same version; logos, font and evidence paths remain stable. Keep the static source tree unmodified during builds.
+
+The public Mintegra operation bundle inspected in this session uses Esri imagery plus authenticated, site-specific image overlays (`master/map-image`, image path and upper-left/lower-right coordinate bounds). The user has no overlay/KML/GeoJSON files. REA static analysis was attempted but reported heap limits on the large bundles; the concrete layer behavior was confirmed by focused, inert source inspection, not authenticated runtime access. No credentials or proprietary map imagery were copied into the app. Playback retains original GPS; missing road geometry does not authorize fabricated map matching. Reindex segment breaks whenever anomalous readings are excluded.

@@ -3,7 +3,7 @@ import multer from 'multer';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import ejs from 'ejs';
-import templates from '../../frontend/views.generated.js';
+import templates,{assetVersion} from '../../frontend/views.generated.js';
 import { database, initialize, audit, one } from './db.js';
 import { Auth, ROLE, accountVersion, canEditData } from './auth.js';
 import { Mailer } from './mail.js';
@@ -22,7 +22,7 @@ const pages=['lineup','dashboard','detail','lineup-form','master','operator-form
 const actions=['lineup-save','lineup-delete','operator-save','operator-delete','profile-save','account-create','logout','import'];
 const titles={'lineup':'DH Line Up',dashboard:'Dashboard',detail:'Detail Unit','lineup-form':'Form Line Up',master:'Operator','operator-form':'Form Operator',dokumentasi:'Dokumentasi',import:'Impor Data',audit:'Riwayat Perubahan',profile:'Profil Saya',accounts:'Kelola Akun','account-reset':'Reset Password Akun','account-edit':'Edit Profil & Role',login:'Login',setup:'Buat Akun Pertama','forgot-password':'Lupa Password','reset-password':'Password Baru',error:'Kesalahan'};
 const url=(page='lineup',params={})=>'/'+page+(Object.keys(params).length?'?'+new URLSearchParams(Object.entries(params).filter(([,v])=>v!==undefined&&v!==null)).toString():'');
-const asset=name=>'/assets/'+name;
+const asset=name=>'/assets/'+name+(/\.(?:js|css)$/.test(name)?'?v='+assetVersion:'');
 const dateId=(value,short=false)=>value?new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:short?'short':'long',...(short?{}:{year:'numeric'}),timeZone:'Asia/Jakarta'}).format(new Date(String(value).slice(0,10)+'T00:00:00Z')):'-';
 const status=row=>row.dh==='Ya'&&row.mine==='Ya'&&row.ftw==='Ya'?['SESUAI','green']:row.mine==='Belum dicek'||row.ftw==='Belum dicek'?['BELUM DICEK','amber']:['TINDAK LANJUT','red'];
 const chipTone=value=>value==='Ya'?'green':value==='Tidak'?'red':value==='Belum dicek'?'amber':'muted';
@@ -32,7 +32,7 @@ const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:10*1024*102
 
 export function createApp({ db:providedDb, storage:providedStorage, mailer:providedMailer, production=Boolean(process.env.VERCEL), activationHash=process.env.BOOTSTRAP_CODE_HASH || '' }={}, app=express()) {
   app.disable('x-powered-by');app.set('trust proxy',production?1:false);app.set('views',path.join(ROOT,'frontend/views'));app.set('view engine','ejs');
-  app.use((req,res,next)=>{res.set({'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin','Cache-Control':'no-store',"Content-Security-Policy":"default-src 'self'; img-src 'self' blob: data: https://*.supabase.co https://services.arcgisonline.com https://tile.openstreetmap.org; connect-src 'self' https://*.supabase.co; style-src 'self' 'unsafe-inline'; script-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});next();});
+  app.use((req,res,next)=>{res.set({'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin','Cache-Control':'no-store',"Content-Security-Policy":"default-src 'self'; img-src 'self' blob: data: https://*.supabase.co https://services.arcgisonline.com https://server.arcgisonline.com https://tile.openstreetmap.org; connect-src 'self' https://*.supabase.co; style-src 'self' 'unsafe-inline'; script-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});next();});
   app.use('/assets',express.static(path.join(ROOT,'frontend/assets'),{dotfiles:'deny',index:false,maxAge:0}));
   app.get('/health',(_req,res)=>res.json({status:'ok',runtime:'node',version:'2.0.0'}));
   app.use(express.urlencoded({extended:false,limit:'100kb'}));app.use(express.json({limit:'100kb'}));
@@ -183,9 +183,11 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
     const filters=validation.filters(req.query),data={filters};
     if(page==='lineup') {data.rows=await req.repo.lineups(filters);data.total=Number((await one(req.db,'SELECT count(*) AS n FROM fleetsync.lineups')).n);}
     if(page==='dashboard') {
-      data.rows=await req.repo.lineups({site:filters.site});
-      data.lineupSceneDate=validation.date(req.query,'scene_date',false)||filters.work_date||data.rows.at(-1)?.work_date||new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
-      data.lineupSceneData=lineupFleet(data.rows,data.lineupSceneDate,url);
+      data.historyRows=await req.repo.lineups({site:filters.site});
+      filters.work_date=filters.work_date||validation.date(req.query,'scene_date',false)||'';
+      data.rows=filters.work_date?data.historyRows.filter(row=>row.work_date===filters.work_date):data.historyRows;
+      data.lineupSceneDate=filters.work_date||data.historyRows.at(-1)?.work_date||new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
+      data.lineupSceneData=lineupFleet(data.historyRows,data.lineupSceneDate,url);
     }
     if(page==='master') data.rows=await req.repo.operators(filters);
     if(page==='detail') data.row=await req.repo.lineup(validation.text(req.query,'id',80,true));

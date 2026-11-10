@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {positionAt,parkingState} from '../frontend/assets/js/fleet-playback.js';
+import {positionAt,parkingState,prepareRoute} from '../frontend/assets/js/fleet-playback.js';
 
 test('sparse GPS observations hold the last fix instead of crossing unknown roads',()=>{
  const route={points:[[0,117,100,25],[.01,117,700,30]]},position=positionAt(route,400);
@@ -17,4 +17,9 @@ test('a stopped observation stays still and is eligible for illustrative parking
 test('breaks and missing or expired observations never create synthetic movement',()=>{
  const route={points:[[0,117,100,20],[.0004,117,160,20]],breaks:[1]};
  assert.equal(positionAt(route,130).lat,0);assert.equal(positionAt(route,99),null);assert.equal(positionAt(route,1061),null);assert.equal(positionAt(null,100),null);assert.equal(parkingState(null),'unavailable');
+});
+
+test('removing anomalous speeds preserves break boundaries and never bridges an excluded fix',()=>{
+ const route=prepareRoute({unit:'DT2322',points:[[0,117,100,20],[.0001,117,110,146],[.0002,117,120,20],[.0003,117,130,20]],breaks:[3]});
+ assert.deepEqual(route.breaks,[1,2]);assert.deepEqual(route.points.map(p=>p[3]),[20,20,20]);assert.equal(positionAt(route,110).interpolated,false);assert.equal(positionAt(route,125).interpolated,false);assert.equal(positionAt(route,125).lat,.0002);
 });

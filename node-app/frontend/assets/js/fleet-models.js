@@ -13,7 +13,7 @@ function contactShadow(width,depth){
 }
 function mesh(parent,geometry,mat,x=0,y=0,z=0){const item=new THREE.Mesh(geometry,mat);item.position.set(x,y,z);parent.add(item);return item;}
 function box(parent,w,h,d,x,y,z,color,rotation){const key=`b:${w}:${h}:${d}`;if(!geometries.has(key))geometries.set(key,new THREE.BoxGeometry(w,h,d));const item=mesh(parent,geometries.get(key),typeof color==='number'?material(color):color,x,y,z);if(rotation)item.rotation.set(...rotation);return item;}
-function roundBox(parent,w,h,d,x,y,z,color,radius=.08,rotation){const key=`rounded:${w}:${h}:${d}:${radius}`;if(!geometries.has(key))geometries.set(key,new RoundedBoxGeometry(w,h,d,3,Math.min(radius,w/2,h/2,d/2)));const item=mesh(parent,geometries.get(key),material(color,.48),x,y,z);if(rotation)item.rotation.set(...rotation);return item;}
+function roundBox(parent,w,h,d,x,y,z,color,radius=.08,rotation){const key=`rounded:${w}:${h}:${d}:${radius}`;if(!geometries.has(key))geometries.set(key,new RoundedBoxGeometry(w,h,d,5,Math.min(radius,w/2,h/2,d/2)));const item=mesh(parent,geometries.get(key),material(color,.48),x,y,z);if(rotation)item.rotation.set(...rotation);return item;}
 const decalMaterials=new Map();
 function decal(text,background='#137050',foreground='#fff',brand=false){
  const key=[text,background,foreground,brand].join(':');if(decalMaterials.has(key))return decalMaterials.get(key);if(typeof document==='undefined')return material(0x137050);
@@ -25,7 +25,7 @@ function dhBadge(parent,size,x,y,z,color){const key='badge:'+color;let mat=decal
 function plate(parent,text,w,h,x,y,z,side=false,brand=false){const item=mesh(parent,new THREE.PlaneGeometry(w,h),decal(text,brand?'#f4b42f':'#116f53',brand?'#17282a':'#ffffff',brand),x,y,z);if(!side)item.rotation.y=Math.PI/2;item.userData.identityText=text;return item;}
 
 function cylinder(parent,r1,r2,h,x,y,z,color,segments=16,rotation){const key=`c:${r1}:${r2}:${h}:${segments}`;if(!geometries.has(key))geometries.set(key,new THREE.CylinderGeometry(r1,r2,h,segments));const item=mesh(parent,geometries.get(key),material(color),x,y,z);if(rotation)item.rotation.set(...rotation);return item;}
-function sphere(parent,r,x,y,z,color,scale=[1,1,1]){const key=`s:${r}`;if(!geometries.has(key))geometries.set(key,new THREE.SphereGeometry(r,16,10));const item=mesh(parent,geometries.get(key),material(color),x,y,z);item.scale.set(...scale);return item;}
+function sphere(parent,r,x,y,z,color,scale=[1,1,1]){const key=`s:${r}`;if(!geometries.has(key))geometries.set(key,new THREE.SphereGeometry(r,32,20));const item=mesh(parent,geometries.get(key),material(color),x,y,z);item.scale.set(...scale);return item;}
 function torus(parent,r,tube,x,y,z,color,rotation=[0,0,0],segments=32){const key=`t:${r}:${tube}:${segments}`;if(!geometries.has(key))geometries.set(key,new THREE.TorusGeometry(r,tube,6,segments));const item=mesh(parent,geometries.get(key),material(color),x,y,z);item.rotation.set(...rotation);return item;}
 function helmet(parent){
  const key='helmet-dome';if(!geometries.has(key))geometries.set(key,new THREE.SphereGeometry(.34,32,16,0,Math.PI*2,0,Math.PI/2));
@@ -152,6 +152,7 @@ function officeCharacter({seated=false,female=false,seat=1}={}){
   officeContour(body,[[0,.88],[.235,.9],[.25,.99],[female?.235:.27,1.16],[female?.27:.29,1.38],[.34,1.53],[.305,1.61],[.14,1.67],[0,1.67]],.65,shirt);
   officeContour(body,[[0,.82],[.24,.82],[.255,.9],[.25,.97],[0,.97]],.73,navy);
   cylinder(body,.084,.092,.19,0,1.695,0,skin,24);
+  for(const side of[-1,1])roundBox(body,.135,.1,.025,side*.16,1.43,.19,shirtShade,.018);dhBadge(body,.1,-.16,1.56,.199,0xf3a31a);
   officeCurve(body,[[0,1, .17],[0,1.32,.18],[0,1.59,.155]],.009,shirtShade);
   for(const side of[-1,1]){const collar=new THREE.Shape();collar.moveTo(side*.012,1.66);collar.lineTo(side*.144,1.61);collar.lineTo(side*.069,1.515);collar.closePath();mesh(body,new THREE.ExtrudeGeometry(collar,{depth:.014,bevelEnabled:true,bevelSize:.008,bevelThickness:.006,bevelSegments:2,steps:1}),material(0x35a1b3,.8),0,0,.148);}
   for(const y of[1.12,1.3,1.48])officeEllipsoid(body,.018,y,.185,.012,.012,.008,0xc8d6d6);
@@ -172,7 +173,7 @@ function officeCharacter({seated=false,female=false,seat=1}={}){
   const hairCap=mesh(head,new THREE.SphereGeometry(1,32,20,0,Math.PI*2,0,1.75),material(hair,.8),0,.085,-.015);hairCap.scale.set(.225,.205,.205);hairCap.rotation.z=0;for(let strand=0;strand<9;strand++){const phi=.15+strand*.34,points=[];for(const theta of[.2,.45,.75,1.05,1.35,1.65]){const sweep=phi+.2*theta;points.push([.226*Math.sin(theta)*Math.cos(sweep),.085+.206*Math.cos(theta),-.015+.206*Math.sin(theta)*Math.sin(sweep)]);}officeCurve(head,points,.0018,0x3e3430);}
   if(female){officeEllipsoid(head,0,-.093,-.123,.199,.291,.094,hair);for(const side of[-1,1]){officeEllipsoid(head,side*.176,-.122,-.038,.058,.234,.092,hair);for(let strand=0;strand<3;strand++)officeCurve(head,[[side*(.15+strand*.013),.13,-.075],[side*(.197+strand*.005),-.08,-.035],[side*(.17+strand*.007),-.34,-.075]],.004,0x4c3b35);}}
   else{for(const side of[-1,1])officeEllipsoid(head,side*.189,.019,-.039,.026,.094,.07,hair);}
-  const headPart=bake(head);headPart.name='character-head';headPart.position.y=1.998;root.add(bake(body),headPart);
+  const headPart=bake(head);headPart.name='character-head';headPart.scale.set(1.12,1.08,1.08);headPart.position.y=2.015;root.add(bake(body),headPart);
   for(const side of[-1,1]){const arm=new THREE.Group(),elbow=seated?[0,-.28,.24]:[side*.022,-.32,0],wrist=seated?[0,-.12,.6]:[side*.025,-.57,.015];officeLimb(arm,[0,0,0],elbow,.105,shirt,.079);officeLimb(arm,elbow,wrist,.075,shirt,.053);officeHand(arm,wrist[0],wrist[1]-.014,wrist[2]+(seated?.085:0),skin,seated,side);const joint=bake(arm);joint.name=side<0?'character-left-arm':'character-right-arm';joint.position.set(side*.328,1.55,0);joint.userData.baseArmX=0;root.add(joint);}
   root.userData={isStaffCharacter:true,seated,female,seat,headwear:'none',referenceStyle:'smooth-office-human',labelHeight:2.4};officePrototypes.set(key,root);
  }

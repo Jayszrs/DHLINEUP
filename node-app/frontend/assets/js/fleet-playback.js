@@ -12,3 +12,12 @@ export function positionAt(route,t,maxGap=900){
  return{lat:a[0]+(interpolate?b[0]-a[0]:0)*ratio,lon:a[1]+(interpolate?b[1]-a[1]:0)*ratio,speed:a[3],time:a[2],age,heading:interpolate?bearing(a,b):bearing(previous,a),gap:!interpolate&&age>90,interpolated:!!interpolate};
 }
 export function parkingState(position){return !position?'unavailable':position.gap?'gap':position.speed<=0?'stopped':null;}
+
+// A discarded anomaly also separates observations; it must not reconnect two road segments.
+export function prepareRoute(route){
+ const boundaries=new Set(route.breaks||[]),observations=[];let segment=0;
+ for(const[index,point]of(route.points||[]).entries()){if(boundaries.has(index))segment++;if(!Array.isArray(point)||point.length<4||!point.every(Number.isFinite)||point[3]<0||point[3]>=80)continue;observations.push({point,index,segment});}
+ observations.sort((a,b)=>a.point[2]-b.point[2]);const breaks=[];
+ for(let i=1;i<observations.length;i++)if(observations[i].segment!==observations[i-1].segment||observations[i].index!==observations[i-1].index+1)breaks.push(i);
+ return{...route,points:observations.map(item=>item.point),breaks};
+}
