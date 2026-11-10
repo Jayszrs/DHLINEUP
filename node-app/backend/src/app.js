@@ -178,7 +178,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
   });
   app.get('/dokumentasi',(_req,res)=>res.redirect(303,url('lineup')));
   speedRoutes(app,view,url,upload);
-  occRoutes(app,view,url);
+  occRoutes(app,view,url,upload);
   for(const page of pages) app.get('/'+page,async(req,res)=>{
     const filters=validation.filters(req.query),data={filters};
     if(page==='lineup') {data.rows=await req.repo.lineups(filters);data.total=Number((await one(req.db,'SELECT count(*) AS n FROM fleetsync.lineups')).n);}

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 const root=new URL('../../',import.meta.url);
 await mkdir(new URL('public/assets/',root),{recursive:true});
 await mkdir(new URL('frontend/assets/js/vendor/',root),{recursive:true});
+const rounded=await readFile(new URL('node_modules/three/examples/jsm/geometries/RoundedBoxGeometry.js',root),'utf8');await writeFile(new URL('frontend/assets/js/vendor/RoundedBoxGeometry.js',root),rounded.replace("from 'three'","from './three.module.js'"));
 for(const name of ['three.module.js','three.core.js']) await cp(new URL('node_modules/three/build/'+name,root),new URL('frontend/assets/js/vendor/'+name,root));
 await cp(new URL('node_modules/leaflet/dist/',root),new URL('frontend/assets/js/vendor/leaflet/',root),{recursive:true});
 for(const name of ['css','js','fonts','dh-logo.png','dh-symbol.png','dh-symbol.svg','login-mine-hd.png']) await cp(new URL('frontend/assets/'+name,root),new URL('public/assets/'+name,root),{recursive:true});
