@@ -55,3 +55,5 @@ The room has 10 conference microphones (four left, four right, two across the mi
 When orienting a cloned Three.js object, set all Euler axes together (`orientCharacter`), because quaternion-to-Euler decomposition can leave x/z at ±π. Setting only y to π on that clone can face the staff away from the monitor. Regression checks cover both initial layout and work/walk/meeting controller behavior.
 
 Mouse wheel and Ctrl-wheel trackpad gestures are handled inside the 3D viewport. Main/preview render buffers are capped at 2.4/3 megapixels; previews render animated states at 30 fps and suspend when hidden or reduced motion is active. Cached geometry/materials and baked static furniture remain shared.
+
+The shared crew-character factory now supplies an original animated-feature style for both office staff and mine drivers. It keeps eye rigs outside the static head bake to support per-clone blinking, while cached buffers/materials stay shared. Office staff remain helmet-free; mine drivers retain their white safety helmet and clipboard. No real portrait, staff identity, attendance data or source record changes with this visual revision.

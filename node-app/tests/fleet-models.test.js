@@ -9,8 +9,8 @@ test('truck labels follow each supplied unit without a baked reference number',(
 
 
 test('office staff stay helmet-free in seated and walking previews while mine drivers keep PPE',()=>{
- for(const seat of[1,2,3,4,5,6])for(const create of[createOccPerson,createOccWalker]){const person=create(seat);assert.equal(person.userData.headwear,'none');assert.equal(person.userData.female,[2,3,4].includes(seat));assert.equal(person.userData.referenceStyle,'reference-clay-office');assert.ok(person.getObjectByName('character-head'));assert.ok(person.getObjectByName('character-left-arm'));if(create===createOccWalker){const leg=person.getObjectByName('character-right-leg');assert.ok(leg);leg.rotation.x=.3;assert.ok(Math.abs(create(seat).getObjectByName('character-right-leg').rotation.x)<1e-12);}}
- assert.equal(createDriver().userData.referenceStyle,'white-helmet-turquoise-reflective-uniform');
+ for(const seat of[1,2,3,4,5,6])for(const create of[createOccPerson,createOccWalker]){const person=create(seat);assert.equal(person.userData.headwear,'none');assert.equal(person.userData.female,[2,3,4].includes(seat));assert.equal(person.userData.referenceStyle,'feature-animation-office');assert.ok(person.getObjectByName('character-head'));assert.ok(person.getObjectByName('character-left-arm'));if(create===createOccWalker){const leg=person.getObjectByName('character-right-leg');assert.ok(leg);leg.rotation.x=.3;assert.ok(Math.abs(create(seat).getObjectByName('character-right-leg').rotation.x)<1e-12);}}
+ assert.equal(createDriver().userData.referenceStyle,'feature-animation-mine-worker');
 });
 
 
@@ -25,3 +25,5 @@ test('all six staff face their assigned PC, with ten table microphones split 4/4
 test('work orientation resets cloned Euler axes instead of flipping the character twice',()=>{
  const model=createOccPerson(1);model.rotation.set(0,Math.PI,0);const cloned=model.clone();for(const heading of[Math.PI,Math.PI/2,-Math.PI/2,Math.PI]){orientCharacter(cloned,heading);cloned.updateMatrixWorld(true);const root=cloned.getWorldPosition(new THREE.Vector3()),face=cloned.getObjectByName('character-face-forward').getWorldPosition(new THREE.Vector3()).sub(root);face.y=0;face.normalize();assert.ok(face.dot(new THREE.Vector3(Math.sin(heading),0,Math.cos(heading)))>.99);}
 });
+
+test('expressive eye rigs blink independently while sharing buffers across clones',()=>{for(const create of[()=>createOccPerson(2),()=>createDriver()]){const first=create(),second=create(),eye=first.getObjectByName('character-eye-left');assert.ok(eye);animateCharacter(first,5.08);assert.ok(eye.scale.y<.1);assert.equal(second.getObjectByName('character-eye-left').scale.y,1);animateCharacter(first,0);assert.equal(eye.scale.y,1);const meshes=[];eye.traverse(o=>{if(o.isMesh)meshes.push(o.geometry);});const other=[];second.getObjectByName('character-eye-left').traverse(o=>{if(o.isMesh)other.push(o.geometry);});assert.equal(meshes[0],other[0]);}assert.equal(createDriver().userData.headwear,'white-safety-helmet');});
