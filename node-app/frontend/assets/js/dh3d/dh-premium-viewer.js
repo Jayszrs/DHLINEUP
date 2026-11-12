@@ -12,7 +12,7 @@ export class DHLineup3DViewer {
   const rotateLabel=document.createElement('label'),rotate=document.createElement('input');rotate.type='checkbox';rotate.addEventListener('change',()=>{this.autoRotate=rotate.checked;this.restart();},{signal:this.abort.signal});rotateLabel.append(rotate,document.createTextNode('Putar otomatis'));toolbar.append(rotateLabel);
   button('−','out',()=>this.setZoom(this.zoom/1.2));button('+','in',()=>this.setZoom(this.zoom*1.2));button('Reset','reset',()=>{this.yaw=.65;this.pitch=.3;this.zoom=1;this.draw();});
   const fullscreen=button('Layar penuh','fullscreen',async()=>{if(document.fullscreenElement===host)await document.exitFullscreen();else try{await host.requestFullscreen();}catch{host.classList.toggle('is-expanded');}this.resize();});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&host.classList.contains('is-expanded')){host.classList.remove('is-expanded');this.resize();}},{signal:this.abort.signal});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(document.fullscreenElement===host)document.exitFullscreen().catch(()=>{});if(host.classList.contains('is-expanded')){host.classList.remove('is-expanded');this.resize();}}},{signal:this.abort.signal});
   document.addEventListener('fullscreenchange',()=>{fullscreen.textContent=document.fullscreenElement===host?'Kecilkan':'Layar penuh';this.resize();},{signal:this.abort.signal});
   const tip=document.createElement('p');tip.className='dh3d__tip';tip.textContent='Geser untuk memutar · Scroll / pinch untuk zoom · Nomor DT contoh, bukan rekaman GPS';host.append(tip);
   try{
