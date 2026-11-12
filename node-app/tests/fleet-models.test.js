@@ -36,3 +36,10 @@ test('V3 models keep native size, all real DT labels, two-sided dump walls and i
  const wheel=truck.userData.wheels[0],center=wheel.position.clone();wheel.rotation.z=.4;assert.deepEqual(wheel.position.toArray(),center.toArray());assert.ok(Math.abs(other.userData.wheels[0].rotation.z)<1e-12);assert.equal(new Set(truck.userData.wheels.map(w=>w.position.toArray().join(','))).size,4);
  for(const input of['EX2050','DT2917 invalid','<script>',''])assert.equal(createTruck(input).userData.unit,'');
 });
+
+
+test('office portraits rest hands on the lap while work poses reach the assigned keyboard',()=>{
+ const work=createOccPerson(5),portrait=createOccObject('person-5');let relaxed;portrait.traverse(o=>{if(o.userData.isStaffCharacter)relaxed=o;});assert.equal(relaxed.userData.relaxed,true);assert.equal(work.userData.relaxed,false);assert.equal(relaxed.userData.characterRevision,'sculpted-studio-v2');
+ work.updateMatrixWorld(true);portrait.updateMatrixWorld(true);for(const side of['left','right']){const typing=work.getObjectByName('character-hand-'+side).getWorldPosition(new THREE.Vector3()),resting=relaxed.getObjectByName('character-hand-'+side).getWorldPosition(new THREE.Vector3());assert.ok(typing.y>1.4&&typing.y<1.5);assert.ok(resting.y>1&&resting.y<1.15);assert.ok(typing.z>resting.z+.4);}
+ const hair=work.getObjectByName('character-head');assert.ok(hair);let calls=0,triangles=0;const room=createOccRoom(false);room.traverse(o=>{if(o.isMesh){calls++;triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;}});assert.ok(calls<180,'shared finishes should keep room draw calls bounded');assert.ok(triangles<750000,'micro details should not use full-resolution head geometry');
+});

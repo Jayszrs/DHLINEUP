@@ -19,7 +19,7 @@ Dua meja depan dekat meja rapat; empat meja belakang dekat pintu. Keenam orang m
 
 ## Aset dan interaksi
 
-- `node-app/frontend/assets/js/dh3d/dh-premium-models.js`: sumber prosedural dari paket, disesuaikan untuk duduk, berjalan, pose driver dan pemisahan rig kepala/mata/lengan/kaki. Seragam biru turquoise reflektif, sepatu bertali; driver memakai helm putih. Pekerja laki-laki memakai radio/pose lengan silang, perempuan memegang tablet pada pratinjau pekerja tambang.
+- `node-app/frontend/assets/js/dh3d/dh-premium-models.js` dengan factory karakter `dh-premium-characters.js`: sumber prosedural dari paket, disesuaikan untuk duduk, berjalan, pose driver dan pemisahan rig kepala/mata/lengan/kaki. Seragam biru turquoise reflektif, sepatu bertali; driver memakai helm putih. Pekerja laki-laki memakai radio/pose lengan silang, perempuan memegang tablet pada pratinjau pekerja tambang.
 - `node-app/frontend/assets/js/fleet-models.js`: adapter berbagi geometri/material, penggabungan permukaan statis, empat roda dengan pivot mandiri, serta nomor DT dinamis di canopy, grille dan kedua sisi. Unit tidak valid menghasilkan model tanpa identitas, bukan fallback DT2917. Permukaan dua sisi bak dipertahankan saat dioptimalkan.
 - Model dipakai oleh ruangan JHO, DH Line Up, preview DT recap speed dan atlas ikon peta yang sudah ada. Preview tetap mendukung rotasi, zoom dan fullscreen; halaman review aset juga memiliki pilihan Putar otomatis yang menghormati reduced motion. Tidak ada tombol jeda animasi.
 - Jadwal kerja/istirahat/meeting, cahaya pagi–malam, PC menyala/mati, zoom mouse/trackpad, reduced motion dan penghentian render saat tidak terlihat dipertahankan. Render dibatasi 30 fps dan jumlah pixel; clone berbagi buffer. Gambar referensi tidak dimuat pada dashboard biasa.
@@ -41,3 +41,9 @@ Bandingkan hasil depan, samping dan belakang dengan referensi:
 Dari `node-app/`: `npm ci`, `npm run build`, `npm test`.
 
 Hasil 12 November 2026: **112 tes lulus**; 11 tes khusus model/profil juga lulus setelah penyesuaian urutan screenshot. Pemeriksaan Chromium pada desktop dan ponsel 390 px: tanpa error JavaScript dan tanpa overflow; keenam profil, zoom mouse/Ctrl-wheel, nomor DT berbeda, mode terang/gelap dan tiga sudut model diperiksa. Simulasi istirahat/meeting tetap menggerakkan enam orang. Hash hero PNG/WebP dan design sheet PNG sama dengan kiriman asli. Halaman review juga diuji tetap memerlukan login.
+
+## Penyempurnaan karakter setelah review
+
+Wajah dan rambut menggunakan permukaan yang dibentuk ulang, mata almond bertekstur iris dan rig berkedip, seragam berkontur serta pita reflektif berwarna pada permukaan kain. Kursi diubah menjadi kursi mesh melengkung dengan cushion dan caster ganda. Mode profil memakai pose duduk santai dengan tangan di pangkuan; pose di ruangan tetap mengetik pada keyboard. Pilihan Fokus wajah/Seluruh badan, mouse/trackpad, reset dan fullscreen tersedia. Toolbar profil dipisahkan dari canvas agar tidak menutupi karakter. Material dikelompokkan menjadi sedikit finish bersama dan detail kecil memakai geometri lebih ringan; ini merupakan pengembangan geometri prosedural, bukan foto atau GLB artis.
+
+Verifikasi revisi ini: **113 tes lulus**. Chromium desktop dan 390 px memeriksa mode fokus wajah/seluruh badan, toolbar yang tidak menutupi model, keenam identitas, gerak kerja/istirahat/meeting, dan tanpa error JavaScript. Pose kerja mempunyai wrist sekitar y=1,43–1,46 dan jangkauan ke keyboard; pose profil bertumpu di pangkuan. Pada fixture ruangan yang sama, pemakaian finish bersama dan detail kecil mengurangi draw call dari 357 menjadi 153; ini pengukuran draw call, bukan klaim peningkatan FPS. Render tetap dibatasi pixel dan 30 fps serta menghormati reduced motion.

@@ -6,6 +6,8 @@
  */
 import * as THREE from '../vendor/three.module.js';
 import {RoundedBoxGeometry} from '../vendor/RoundedBoxGeometry.js';
+export {createStudioWorker as createWorker} from './dh-premium-characters.js';
+import {createStudioWorker as createWorker} from './dh-premium-characters.js';
 
 const PALETTE = Object.freeze({
   blue: 0x00a7e1, blueLight: 0x10aee5, blueDeep: 0x096d9f,
@@ -21,9 +23,6 @@ const mats = Object.fromEntries(Object.entries(PALETTE).map(([k, color]) => [k,
 mats.glass = new THREE.MeshPhysicalMaterial({color: PALETTE.glass, roughness:0.13, metalness:0.1, transparent:true, opacity:0.78, clearcoat:0.8});
 const tireMat = new THREE.MeshStandardMaterial({color:0x171a1f, roughness:0.94, metalness:0.01});
 const treadMat = new THREE.MeshStandardMaterial({color:0x2b2b2c, roughness:0.98});
-const softBlack = new THREE.MeshStandardMaterial({color:0x0e141f, roughness:0.33});
-const eyeBrown = new THREE.MeshStandardMaterial({color:0x522c25, roughness:0.36});
-const hairMat = new THREE.MeshStandardMaterial({color:0x18161d, roughness:0.74});
 
 function mesh(parent, geometry, material, p=[0,0,0], name='') {
   const out = new THREE.Mesh(geometry, material);
@@ -45,10 +44,7 @@ function rod(parent, a, b, r, material, name='') {
   const d=end.clone().sub(start); const part=cylinder(parent,r,r,d.length(),start.clone().add(end).multiplyScalar(.5).toArray(),material,10,name);
   part.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize()); return part;
 }
-function curve(parent, pts, r, material, name='') {
-  const cv=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(...p)));
-  return mesh(parent, new THREE.TubeGeometry(cv, Math.max(14,pts.length*6),r,8,false),material,[0,0,0],name);
-}
+
 function plate(parent, text, size, p, opts={}) {
   if(typeof document==='undefined') return new THREE.Group();
   const c=document.createElement('canvas'); c.width=1024; c.height=256;
@@ -78,103 +74,6 @@ function sunburst(parent, size, p, rotation=[0,0,0], dark=true) {
   const tx=new THREE.CanvasTexture(c);tx.colorSpace=THREE.SRGBColorSpace;
   const out=mesh(parent,new THREE.PlaneGeometry(size,size),new THREE.MeshBasicMaterial({map:tx,transparent:true,side:THREE.DoubleSide,depthWrite:false}),p,'DH_symbol');
   out.rotation.set(...rotation);return out;
-}
-function boot(parent,x,z,forward=0) {
-  sphere(parent,[.29,.24,.38],[x,.25,z+.09+forward],softBlack,16,'safety_boot');
-  box(parent,[.48,.33,.6],[x,.30,z],mats.black,'boot_upper');
-  for(let i=0;i<4;i++) rod(parent,[x-.15,.39+i*.022,z+.2],[x+.15,.39+i*.022,z+.2],.013,mats.yellow,'laces');
-}
-function stripe(parent,width,p) {return box(parent,[width,.09,.075],p,mats.silver,'reflective_tape');}
-
-/** Supplied V3 worker adapted to office seating and the application's animation rig. */
-export function createWorker({gender='male',clipboard,pose='hero',helmet=true,seat=1}={}) {
-  const female=gender==='female',seated=pose==='seated',walking=pose==='walking';
-  if(clipboard===undefined)clipboard=female&&!seated&&!walking;
-  const root=new THREE.Group();root.name=`DH_Worker_${gender}`;
-  const body=new THREE.Group();body.name='worker-uniform';root.add(body);
-  const skin=new THREE.MeshStandardMaterial({color:[0xefbb86,0xf0c394,0xeab789,0xefbe8f,0xdca77a,0xe9b584][(seat-1)%6],roughness:.58});
-  const hair=new THREE.MeshStandardMaterial({color:[0x222326,0x29211f,0x252127,0x362b27,0x292725,0x20262a][(seat-1)%6],roughness:.65});
-  function contour(parent,profile,material,depth=.55,name=''){
-    const item=mesh(parent,new THREE.LatheGeometry(profile.map(([r,y])=>new THREE.Vector2(r,y)),36),material,[0,0,0],name);item.scale.z=depth;return item;
-  }
-  function limb(parent,a,b,r1,r2,material,name=''){
-    const av=new THREE.Vector3(...a),bv=new THREE.Vector3(...b),length=av.distanceTo(bv),half=length/2;
-    const item=contour(parent,[[0,-half-r1*.45],[r1*.7,-half-r1*.3],[r1,-half],[r1*.98,-half+length*.2],[r2,half],[r2*.68,half+r2*.3],[0,half+r2*.45]],material,1,name);
-    item.position.copy(av).add(bv).multiplyScalar(.5);item.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),bv.sub(av).normalize());return item;
-  }
-  const torso=[[0,1.33],[.39,1.34],[female?.4:.46,1.53],[female?.42:.48,1.93],[.52,2.31],[.48,2.43],[.23,2.51],[0,2.51]];
-  contour(body,torso,mats.blue,.61,'blue_uniform_jacket');
-  for(const [y,r]of[[1.61,female?.415:.466],[1.88,female?.422:.478]])contour(body,[[0,y],[r,y],[r+.012,y+.095],[0,y+.095]],mats.silver,.615,'reflective_tape');
-  cylinder(body,.13,.15,.27,[0,2.58,0],skin,24,'neck');
-  for(const x of[-.22,.22]){
-    const collar=box(body,[.23,.20,.055],[x*.67,2.43,.29],mats.blueDeep,'uniform_collar');collar.rotation.z=Math.sign(x)*.35;
-    box(body,[.23,.18,.028],[x,2.17,.3],mats.blueDeep,'chest_pocket');
-    sphere(body,[.018,.018,.012],[x,2.2,.321],mats.silver,12,'pocket_button');
-  }
-  box(body,[.035,.68,.018],[0,2.04,.3],mats.blueDeep,'shirt_placket');
-  for(let i=0;i<3;i++)sphere(body,[.017,.017,.012],[.025,2.27-i*.17,.319],mats.silver,12,'shirt_button');
-  sunburst(body,.22,[.25,2.38,.312],[0,0,0],false);
-  contour(body,[[0,1.24],[.4,1.24],[.425,1.39],[0,1.39]],mats.navy,.68,'hips');
-  contour(body,[[0,1.33],[.425,1.33],[.429,1.43],[0,1.43]],softBlack,.69,'belt');
-  box(body,[.17,.13,.035],[0,1.39,.31],mats.silver,'buckle');
-  for(const side of[-1,1]){
-    const leg=new THREE.Group();leg.name=side<0?'character-left-leg':'character-right-leg';
-    leg.position.set(side*.225,1.28,0);root.add(leg);
-    const knee=seated?[side*.025,-.03,.66]:[side*.015,-.57,.015],ankle=seated?[side*.025,-.99,.73]:[side*.02,-1,.02];
-    limb(leg,[0,0,0],knee,.175,.15,mats.navy,'cargo_thigh');limb(leg,knee,ankle,.145,.105,mats.navy,'pant_leg');
-    box(leg,[.09,.26,.22],[side*.17,-.24,seated?.28:.02],mats.navy,'cargo_pocket');
-    const z=ankle[2],x=ankle[0];
-    sphere(leg,[.17,.135,.30],[x,-1.11,z+.12],softBlack,24,'safety_boot');
-    box(leg,[.32,.055,.54],[x,-1.225,z+.13],mats.black,'boot_sole');
-    for(let i=0;i<4;i++)rod(leg,[x-.08,-1.015,z+.17+i*.036],[x+.08,-1.015,z+.19+i*.036],.009,mats.yellow,'laces');
-  }
-  // Soft continuous face; eyes remain separate so every cloned character can blink.
-  const head=new THREE.Group();head.name='character-head';head.position.y=3.0;root.add(head);
-  sphere(head,[.425,.50,.36],[0,0,0],skin,40,'face');
-  for(const side of[-1,1]){
-    sphere(head,[.075,.11,.065],[side*.414,-.045,.01],skin,24,'ear');
-    curve(head,[[side*.075,.21,.336],[side*.18,.25,.319],[side*.29,.21,.258]],female?.019:.025,hair,'eyebrow');
-    const eye=new THREE.Group();eye.name='character-eye-'+(side<0?'left':'right');eye.position.set(side*.17,.09,.319);head.add(eye);
-    sphere(eye,[female?.109:.102,.091,.039],[0,0,0],mats.white,28,'eye_white');
-    sphere(eye,[.048,.065,.016],[-side*.005,-.002,.036],eyeBrown,24,'iris');
-    sphere(eye,[.027,.046,.009],[-side*.005,-.004,.05],softBlack,24,'pupil');
-    sphere(eye,[.014,.018,.004],[-.018,.024,.059],mats.white,16,'eye_glint');
-    curve(eye,[[-.1,.008,0],[-.06,.079,.02],[0,.095,.022],[.065,.073,.012],[.1,.005,0]],female?.012:.008,hair,'eyelid');
-    if(female)for(let i=0;i<3;i++)curve(eye,[[side*(.07+i*.013),.067-i*.01,.01],[side*(.095+i*.016),.088-i*.01,.009]],.005,hair,'lashes');
-  }
-  sphere(head,[.037,.085,.037],[0,-.06,.343],skin,24,'nose_bridge');
-  sphere(head,[.055,.042,.052],[0,-.137,.367],skin,24,'nose');
-  curve(head,[[-.135,-.232,.302],[-.068,-.274,.319],[0,-.284,.323],[.07,-.273,.317],[.137,-.231,.302]],.009,eyeBrown,'smile');
-  const positions=[],indices=[],cols=40,rows=18;
-  for(let row=0;row<=rows;row++)for(let col=0;col<=cols;col++){
-    const phi=col/cols*Math.PI*2,theta=(1.04+(1-Math.cos(phi))*.6)*row/rows;
-    positions.push(.445*Math.sin(theta)*Math.sin(phi),.03+.50*Math.cos(theta)+.035*Math.sin(theta)*Math.exp(-Math.pow(Math.atan2(Math.sin(phi),Math.cos(phi))/1.3,2)),-.025+.377*Math.sin(theta)*Math.cos(phi));
-  }
-  for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){const a=row*(cols+1)+col,b=a+cols+1;indices.push(a,b,a+1,b,b+1,a+1);}
-  const cap=new THREE.BufferGeometry();cap.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));cap.setIndex(indices);cap.computeVertexNormals();mesh(head,cap,hair,[0,0,0],'hair_cap');
-  if(female){
-    sphere(head,[.36,seat===4?.45:.34,.17],[0,-.20,-.25],hair,32,'hair_back');
-    for(const side of[-1,1])sphere(head,[.09,.29,.13],[side*.36,-.13,-.08],hair,28,'side_hair');
-    if(seat!==4){sphere(head,[.16,.18,.14],[0,-.12,-.43],hair,24,'ponytail_tie');for(let i=0;i<3;i++)sphere(head,[.12-i*.014,.19,.115],[0,-.28-i*.16,-.44],hair,24,'ponytail');}
-  }
-  if(helmet){
-    const dome=mesh(head,new THREE.SphereGeometry(.49,40,20,0,Math.PI*2,0,Math.PI/2),mats.white,[0,.34,-.025],'helmet_dome');dome.scale.y=.69;
-    const brim=cylinder(head,.50,.51,.075,[0,.34,0],mats.white,40,'hardhat_brim');brim.scale.z=1.12;
-    box(head,[.11,.06,.54],[0,.66,-.03],mats.white,'helmet_rib');sunburst(head,.30,[0,.48,.434],[0,0,0],true);
-  }
-  const forward=new THREE.Object3D();forward.name='character-face-forward';forward.position.z=.6;head.add(forward);
-  for(const side of[-1,1]){
-    const arm=new THREE.Group();arm.name='character-'+(side<0?'left':'right')+'-arm';arm.position.set(side*.51,2.32,0);root.add(arm);
-    const elbow=seated?[side*.08,-.42,.28]:walking?[side*.035,-.50,.015]:[side*.18,-.40,.20];
-    const wrist=seated?[side*.06,-.21,.94]:walking?[side*.04,-.88,.035]:clipboard&&side>0?[side*.02,-.53,.62]:[side<0?.79:-.78,-.43+(side>0?.12:0),.61];
-    limb(arm,[0,0,0],elbow,.155,.13,mats.blue,'sleeve_upper');limb(arm,elbow,wrist,.125,.08,mats.navy,'sleeve_forearm');
-    const av=new THREE.Vector3(...elbow).multiplyScalar(.65);sphere(arm,[.156,.055,.16],av.toArray(),mats.silver,24,'arm_reflective');
-    sphere(arm,[.095,.072,.13],wrist,skin,24,'hand');for(let i=0;i<4;i++)sphere(arm,[.023,.025,.075],[wrist[0]+(i-1.5)*.038,wrist[1]-.01,wrist[2]+.075],skin,16,'finger');
-    arm.userData.baseArmX=0;
-  }
-  if(clipboard&&!seated&&!walking){const board=new THREE.Group();board.name='inspection_tablet';board.position.set(.56,1.93,.69);board.rotation.set(-.18,.15,-.12);root.add(board);box(board,[.40,.56,.06],[0,0,0],mats.black,'tablet_frame');box(board,[.34,.47,.01],[0,0,.038],mats.glass,'tablet_screen');}
-  else if(!seated&&!walking){box(body,[.12,.26,.1],[-.44,1.48,.16],mats.black,'walkie_talkie');rod(body,[-.44,1.57,.16],[-.44,1.89,.16],.011,softBlack,'radio_antenna');}
-  root.userData={gender,pose,helmet,sourcePack:'DHLINEUP_3D_CODEX_V3',illustrativeModel:true};return root;
 }
 
 function addWheel(root,x,z,r=1.06) {

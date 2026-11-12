@@ -60,3 +60,6 @@ The shared crew-character factory now supplies an original animated-feature styl
 
 
 The 12 November 2026 revision uses the user-supplied DHLINEUP_3D_CODEX_V3 source for worker and truck geometry. Staff 1–4 occupy the four rear desks; staff 5–6 occupy the two front desks, following the red numbers on the supplied screenshot. JHO people remain helmet-free and retain real profile links, schedule motion and independent rigs. All visible DT plates use the actual validated unit, never the reference image ID. The authenticated `/3d-preview` page is a visual-only demo with an explicit example number and the unchanged approved static reference.
+
+
+The character refinement adds a dedicated `dh-premium-characters.js` factory, preserving the source-pack API. Faces, hair, eyelids, uniform surfaces and ergonomic mesh chairs are remodeled; office work and relaxed portrait poses use separate cached rigs. Work hands reach the keyboard, portrait hands rest on the lap. The profile viewer defaults to a closer face/torso view with a full-body toggle and a toolbar below the canvas. Six identities, physical desk ordering, source inventory, source images and real profile/photo linkage remain unchanged. Tiny surfaces use lower tessellation and shared finish groups; model-budget and work/portrait wrist-position regressions are covered by tests.

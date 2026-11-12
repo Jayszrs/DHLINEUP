@@ -74,3 +74,7 @@
 @media(max-width:600px){.dashboard-filter>label{flex:1 1 160px;max-width:none}.dashboard-filter .muted{margin-top:2px}}
 
 .night-shift-empty{margin-bottom:20px;padding:20px}.night-shift-empty h3{margin:0 0 8px}.night-shift-empty p{margin:0 0 16px}.night-shift-empty .subtle-button{margin-left:8px}
+
+.object-preview-controls{flex-wrap:wrap;max-width:calc(100% - 32px)}
+
+.person-preview-stage{min-height:480px;background:var(--surface,#fff)}.person-preview-stage .object-preview-controls{bottom:10px;left:12px;max-width:calc(100% - 24px)}@media(max-width:700px){.person-preview-stage{min-height:400px}}
