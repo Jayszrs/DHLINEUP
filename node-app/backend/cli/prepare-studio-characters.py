@@ -41,13 +41,21 @@ def prepare(source, output, gender):
              'chest': 'DEF-Spine3' if female else 'DEF-Chest',
              'neck': 'DEF-Neck', 'head': 'DEF-Head'}
     for side in ('L', 'R'):
-        for joint, rain, snow in [('arm', 'Upperarm1', 'UpperArm_1'),
+        for joint, rain, snow in [('shoulder', 'Clavicle', 'Shoulder'),
+                                  ('arm', 'Upperarm1', 'UpperArm_1'),
                                   ('forearm', 'Forearm1', 'Forearm_1'),
                                   ('hand', 'Hand', 'Wrist'),
                                   ('thigh', 'Thigh1', 'Thigh_1'),
                                   ('shin', 'Shin1', 'Knee_1'),
                                   ('foot', 'Foot', 'Foot')]:
             names[joint + '.' + side] = 'DEF-' + (rain if female else snow) + '.' + side
+        for finger in ('Index', 'Middle', 'Ring', 'Pinky'):
+            for segment in range(4):
+                source_name = ('DEF-' + finger + str(segment + 1) if female else
+                               'DEF-Finger_' + finger + ('_Carpal' if segment == 0 else str(segment)))
+                names[finger.lower() + str(segment) + '.' + side] = source_name + '.' + side
+        for segment in range(1, 4):
+            names['thumb' + str(segment) + '.' + side] = ('DEF-' if female else 'DEF-Finger_') + 'Thumb' + str(segment) + '.' + side
     heads = {name: rig.matrix_world @ rig.data.bones[old].head_local for name, old in names.items()}
     arm = bpy.data.armatures.new('DH-Web-Deform')
     clean = bpy.data.objects.new('DH-Studio-' + gender, arm)
@@ -57,30 +65,48 @@ def prepare(source, output, gender):
     bpy.ops.object.mode_set(mode='EDIT')
     parents = {'spine': 'hips', 'chest': 'spine', 'neck': 'chest', 'head': 'neck'}
     for side in ('L', 'R'):
-        parents.update({'arm.' + side: 'chest', 'forearm.' + side: 'arm.' + side,
+        parents.update({'shoulder.' + side: 'chest', 'arm.' + side: 'shoulder.' + side,
+                        'forearm.' + side: 'arm.' + side,
                         'hand.' + side: 'forearm.' + side, 'thigh.' + side: 'hips',
                         'shin.' + side: 'thigh.' + side, 'foot.' + side: 'shin.' + side})
+        for finger in ('index', 'middle', 'ring', 'pinky', 'thumb'):
+            first = 1 if finger == 'thumb' else 0
+            for segment in range(first, 4):
+                parents[finger + str(segment) + '.' + side] = ('hand.' + side if segment == first else
+                                                               finger + str(segment - 1) + '.' + side)
     for name, old in names.items():
         bone = arm.edit_bones.new(name)
         bone.head = heads[name]
         bone.tail = rig.matrix_world @ rig.data.bones[old].tail_local
-        if (bone.tail - bone.head).length < .01:
+        if (bone.tail - bone.head).length < .0001:
             bone.tail = bone.head + Vector((0, 0, .1))
     for name, parent in parents.items():
         arm.edit_bones[name].parent = arm.edit_bones[parent]
     bpy.ops.object.mode_set(mode='OBJECT')
 
+    original_names = {old: name for name, old in names.items()}
+
     def remap(group):
+        if group in original_names:
+            return original_names[group]
         side = 'L' if group.endswith('.L') else 'R' if group.endswith('.R') else None
         lower = group.lower()
         if any(t in lower for t in ('face', 'lip', 'jaw', 'head', 'brow', 'eye', 'hair', 'cheek', 'nose', 'chin', 'laugh', 'temple', 'ponytail')):
             return 'head'
         if side:
+            for finger in ('thumb', 'index', 'middle', 'pinky', 'ring'):
+                if finger in lower and ('finger' in lower or group.startswith(('DEF-' + finger.title(), 'DEF-COR-'))):
+                    source_bone = rig.data.bones.get(group)
+                    if source_bone:
+                        candidates = [name for name in names if name.startswith(finger) and name.endswith('.' + side)]
+                        return min(candidates, key=lambda name: (heads[name] - rig.matrix_world @ source_bone.head_local).length_squared)
             if any(t in lower for t in ('finger', 'thumb', 'index', 'middle', 'pinky', 'hand', 'wrist')) or group.startswith('DEF-Ring'):
                 return 'hand.' + side
             if 'forearm' in lower or 'elbow' in lower:
                 return 'forearm.' + side
-            if 'upperarm' in lower or 'shoulder' in lower or 'clavicle' in lower:
+            if 'shoulder' in lower or 'clavicle' in lower:
+                return 'shoulder.' + side
+            if 'upperarm' in lower:
                 return 'arm.' + side
             if 'thigh' in lower or 'hip.' in lower:
                 return 'thigh.' + side
@@ -165,7 +191,7 @@ def prepare(source, output, gender):
         new = bpy.data.objects.new(old.name.replace('GEO-', 'DH-'), mesh)
         bpy.context.scene.collection.objects.link(new)
         new.matrix_world = old.matrix_world
-        # Delete the old numeric deform assignments and rebuild 17 normalized groups.
+        # Keep the small web skeleton, including shoulder and individual finger joints.
         for group in old.vertex_groups:
             new.vertex_groups.new(name=group.name)
         new.vertex_groups.clear()

@@ -15,11 +15,19 @@ and are not shipped to Vercel.
 `node-app/backend/cli/prepare-studio-characters.py` converts a locally downloaded
 source `.blend` to an embedded GLB. It opens source files with scripts disabled,
 retains the authored face/hair topology, evaluates surface modifiers and reduces
-the film control rig to 17 deform bones. Rain's three skin UDIM tiles are packed
-into one atlas. The website adds turquoise/navy clothing, collars, sleeves,
+the film control rig to 57 deform bones, retaining independent shoulders and
+finger chains. Rain's three skin UDIM tiles are packed
+into one atlas. The website adds turquoise/navy clothing, fitted sleeves,
 branding, hand poses and a safety helmet for mine drivers. JHO staff have no
 helmet. Face/eye/hair geometry follows only the head; iris/white/pupil materials
 are preserved separately. Regression tests catch accidental face-to-hand weights.
+
+Arms use elbow-guided inverse kinematics. Profile poses rest the hands with a
+gentle finger curl, while workstation poses place them at keyboard height.
+Typing alternates individual fingers in short, staggered phrases, accompanied
+by small wrist movements. Shoulder weights stay on the clavicles so lowering an
+arm preserves the shirt silhouette. Animation uses the existing visibility,
+reduced-motion and 30 fps limits.
 
 GLBs are cached once per gender. SkeletonUtils clones independent bones per
 person while buffers and materials remain shared. Fresh character instances
