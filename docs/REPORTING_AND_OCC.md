@@ -63,3 +63,16 @@ The 12 November 2026 revision uses the user-supplied DHLINEUP_3D_CODEX_V3 source
 
 
 The character refinement adds a dedicated `dh-premium-characters.js` factory, preserving the source-pack API. Faces, hair, eyelids, uniform surfaces and ergonomic mesh chairs are remodeled; office work and relaxed portrait poses use separate cached rigs. Work hands reach the keyboard, portrait hands rest on the lap. The profile viewer defaults to a closer face/torso view with a full-body toggle and a toolbar below the canvas. Six identities, physical desk ordering, source inventory, source images and real profile/photo linkage remain unchanged. Tiny surfaces use lower tessellation and shared finish groups; model-budget and work/portrait wrist-position regressions are covered by tests.
+
+
+## CCTV daily reporting (12 November 2026)
+
+The dedicated `/occ-cctv` dashboard reads numeric daily reports for ACP, KCP, BCP, BPP, HO and SSCP. Source: CCTV Availability All Site, spreadsheet `1HuqMh0XZyCknIT-2w4hcpVq14Yb10_O76CevWwJu7rE`, Sheet1 (`gid=2101606077`). The verified import covers 31 July through 12 November 2026: 568 site/day rows. SSCP has 62 missing days before October; these remain unknown, never fabricated as zero or 100%. The original totals, down/ON counts, percentage labels and Remarks are retained even where camera names and down counts disagree. Such rows have a visible verification note. Offline duration and evidence absent in the source remain empty.
+
+New reports use unique camera names to derive down, ON = total - down and availability = ON / total. Availability below 60% is marked poor. Duration is independently entered per camera (0?1440 minutes/day), not used to invent a time-weighted availability formula. Editing a historical count requires an explicit recalculation checkbox; the source snapshot and audit history stay retained. Report versions prevent stale overwrites. Changing site/date requires loading that report before saving.
+
+Authenticated evidence accepts validated PNG/JPEG/WebP images (5 MB) and MP4/WebM media (20 MB), at most four attachments per camera and twenty per report. Supabase remains private. Upload tickets are bound to the current editor and consumed once. Viewing evidence requires report access; video can use byte ranges locally and short-lived signed URLs in Supabase. Evidence is hosted in the website, with no Drive redirect. Spreadsheet imports never overwrite existing site/day reports.
+
+Six independent site charts appear above history, with a 60% reference and source-value tooltips. Date/site filters apply to history and full Excel exports; camera search refines history/export details. Latest-day counts and period-weighted availability are labelled separately. The shared SVG chart component also covers Line Up daily trends, weighted speed averages, OCC inventory check coverage and HO CCTV history. Missing readings stay unknown. Charts support pointer inspection, keyboard arrows, responsive sizing and multi-series visibility without a chart framework.
+
+Import CLI: `node backend/cli/import-cctv.js <source.json>` validates without database writes; append `--apply` with the database environment to import idempotently. The package contains matching `spreadsheetId`, formatted `values` and unformatted `raw_values` from the same Sheet1 range; importing does not modify Google Sheets.

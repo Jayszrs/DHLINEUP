@@ -13,6 +13,7 @@ import { Recovery } from './recovery.js';
 import { equipmentOptions, addEquipmentOption, removeEquipmentOption, suggestedKind } from './catalog.js';
 import { speedRoutes } from './speed-routes.js';
 import {lineupFleet} from './fleet-data.js';
+import {cctvRoutes} from './cctv-routes.js';
 import {occRoutes} from './occ-routes.js';
 import { Repository } from './repository.js';
 import { Storage } from './storage.js';
@@ -34,7 +35,7 @@ const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:10*1024*102
 
 export function createApp({ db:providedDb, storage:providedStorage, mailer:providedMailer, production=Boolean(process.env.VERCEL), activationHash=process.env.BOOTSTRAP_CODE_HASH || '' }={}, app=express()) {
   app.disable('x-powered-by');app.set('trust proxy',production?1:false);app.set('views',path.join(ROOT,'frontend/views'));app.set('view engine','ejs');
-  app.use((req,res,next)=>{res.set({'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin','Cache-Control':'no-store',"Content-Security-Policy":"default-src 'self'; img-src 'self' blob: data: https://*.supabase.co https://services.arcgisonline.com https://server.arcgisonline.com https://tile.openstreetmap.org; connect-src 'self' https://*.supabase.co; style-src 'self' 'unsafe-inline'; script-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});next();});
+  app.use((req,res,next)=>{res.set({'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin','Cache-Control':'no-store',"Content-Security-Policy":"default-src 'self'; img-src 'self' blob: data: https://*.supabase.co https://services.arcgisonline.com https://server.arcgisonline.com https://tile.openstreetmap.org; connect-src 'self' https://*.supabase.co; style-src 'self' 'unsafe-inline'; script-src 'self'; media-src 'self' blob: https://*.supabase.co; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});next();});
   const scriptRoot=path.join(ROOT,'frontend/assets/js'),scriptCache=new Map();
   app.get(/^\/assets\/js\/(.+\.js)$/,async(req,res,next)=>{
     const filename=path.resolve(scriptRoot,req.params[0]);if(!filename.startsWith(scriptRoot+path.sep))return next();
@@ -186,6 +187,7 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
   });
   app.get('/dokumentasi',(_req,res)=>res.redirect(303,url('lineup')));
   speedRoutes(app,view,url,upload);
+  cctvRoutes(app,view,url);
   occRoutes(app,view,url,upload);
   app.get('/3d-preview',async(req,res)=>view(req,res,'three-d',{label:'Pratinjau aset 3D'}));
   app.get('/dh-3d-preview.html',(_req,res)=>res.redirect(303,url('3d-preview')));

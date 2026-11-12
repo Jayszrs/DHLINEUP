@@ -5,6 +5,7 @@ import {OccMeetings,meetingLocal,meetingTime} from './occ-meetings.js';
 import {occPhotos,driveReference} from './occ-photos.js';
 import {one} from './db.js';
 import {reportWorkbook} from './report-workbook.js';
+import {CctvRepository,cctvFilters,cctvPercent,CCTV_SITES,CCTV_SOURCE_URL} from './cctv.js';
 import {OccTeam,TEAM_STATUSES} from './occ-team.js';
 
 const labels={'occ-dashboard':'Dashboard OCC JHO','occ-cctv':'CCTV Availability','occ-availability':'Inventory Availability','occ-assets':'Inventory OCC'};
@@ -27,11 +28,12 @@ export function occRoutes(app,view,url,upload){
  app.get('/occ-export',async(req,res)=>{const filters=occFilters(req.query),data=await new OccRepository(req.db,req.user.id).data(filters),kind=choice(req.query,'kind',['assets','cctv','availability'],'assets');const assets=kind==='assets',keys=kind==='cctv'?OCC_CCTV_SITES:OCC_ITEMS,checks=kind==='cctv'?data.cctv:data.availability;const rows=assets?[['Kategori','Aset','Kode setup','Qty','Brand','Model','Penempatan','Ketersediaan','Kondisi','Spesifikasi','Perangkat terkait','Catatan'],...data.assets.map(a=>[a.category,a.name,a.asset_code,a.qty,a.brand,a.model,a.placement,a.availability,a.condition,a.specifications,a.related_device,a.notes])]:[['Tanggal',...keys,'Catatan'],...checks.map(r=>[r.work_date,...keys.map(k=>r.statuses[k]||'Not Checked'),r.notes])];res.attachment('DHOCC_OCC_'+kind+'.xlsx').type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(reportWorkbook([{name:assets?'Inventory OCC':kind==='cctv'?'CCTV Availability':'Inventory Availability',title:'DHOCC · '+(assets?'Inventory OCC':kind==='cctv'?'CCTV Availability':'Inventory Availability'),subtitle:`OCC Jakarta Head Office · ${filters.work_date||[filters.from||'Awal data',filters.to||'Akhir data'].join(' s.d. ')} · ${rows.length-1} baris`,note:'Sumber: tiga tab spreadsheet OCC. Seluruh hasil filter diekspor; data asli tidak diubah.',rows}]));});
  for(const page of Object.keys(labels))app.get('/'+page,async(req,res)=>{
   const filters=occFilters(req.query),data=await new OccRepository(req.db,req.user.id).data(filters);
+  const cctvData=['occ-dashboard','occ-availability'].includes(page)?await new CctvRepository(req.db).data(cctvFilters({to:filters.work_date||currentDay()})):null;
   const team=page==='occ-dashboard'?await new OccTeam(req.db,req.user.id).all():[];
   const meetingDay=date(req.query,'meeting_date',false)||currentDay(),sceneMeetings=page==='occ-dashboard'?await new OccMeetings(req.db,req.user.id).listWindow(meetingDay):[],start=new Date(meetingDay+'T00:00:00+07:00').valueOf(),end=start+86400000,meetings=sceneMeetings.filter(m=>new Date(m.start_at).valueOf()<end&&new Date(m.end_at).valueOf()>start);
   const photoSetting=await one(req.db,"SELECT setting_value FROM fleetsync.app_settings WHERE setting_key='occ_photos_v1'");let manifest={};try{manifest=JSON.parse(photoSetting?.setting_value||'{}');}catch{}
   for(const asset of data.assets)asset.photo_count=manifest[driveReference(asset.photo_url)]?.length||0;
-  return view(req,res,'occ',{...defaults,label:labels[page],occPage:page,occFilters:filters,occAssets:data.assets,occAllAssets:data.allAssets,occCctv:data.cctv,occAvailability:data.availability,occSelectedCctv:data.selectedCctv,occSelectedInventory:data.selectedInventory,occSummary:data.summary,meetings,sceneMeetings,meetingDay,meetingTime,occTeam:team.map(({photo_path,own_photo,...person})=>({...person,photo:photo_path?url('occ-team-photo',{nik:person.nik,v:person.version}):'',href:canEditData(req.user)?url('occ-team-form',{nik:person.nik}):''}))});
+  return view(req,res,'occ',{...defaults,cctvData,cctvPercent,CCTV_SITES,cctvSourceUrl:CCTV_SOURCE_URL,label:labels[page],occPage:page,occFilters:filters,occAssets:data.assets,occAllAssets:data.allAssets,occCctv:data.cctv,occAvailability:data.availability,occSelectedCctv:data.selectedCctv,occSelectedInventory:data.selectedInventory,occSummary:data.summary,meetings,sceneMeetings,meetingDay,meetingTime,occTeam:team.map(({photo_path,own_photo,...person})=>({...person,photo:photo_path?url('occ-team-photo',{nik:person.nik,v:person.version}):'',href:canEditData(req.user)?url('occ-team-form',{nik:person.nik}):''}))});
  });
  app.get('/occ-form',async(req,res)=>{
   requireEditor(req);const repo=new OccRepository(req.db,req.user.id),kind=formKind(req.query);let row;

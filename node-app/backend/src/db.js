@@ -50,6 +50,7 @@ export async function initialize(db) {
   await db.exec(await readFile(new URL('../../database/occ.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../../database/reporting.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../../database/occ-team.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../../database/cctv.sql',import.meta.url),'utf8'));
 }
 
 export async function one(db, sql, values = []) { return (await db.query(sql, values)).rows[0]; }

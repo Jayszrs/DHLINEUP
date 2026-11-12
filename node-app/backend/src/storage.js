@@ -12,7 +12,7 @@ export class Storage {
     this.bucket=bucket;this.directory=path.resolve(directory);
     if(process.env.VERCEL&&!this.client) throw new Error('Penyimpanan Supabase wajib diatur untuk deployment.');
   }
-  valid(name) { if(!/^(evidence\/[A-Za-z0-9_]+\.png|reference\/[A-Za-z0-9_]+\.png|uploads\/[a-f0-9]{48}\.(png|jpg|webp)|incoming\/[0-9]+\/[a-f0-9]{64}\.(csv|xlsx|png|jpg|webp))$/.test(name)) throw new HttpError(404,'Gambar tidak ditemukan.');return name; }
+  valid(name) { if(!/^(evidence\/[A-Za-z0-9_]+\.png|reference\/[A-Za-z0-9_]+\.png|uploads\/[a-f0-9]{48}\.(png|jpg|webp|mp4|webm)|incoming\/[0-9]+\/[a-f0-9]{64}\.(csv|xlsx|png|jpg|webp|mp4|webm))$/.test(name)) throw new HttpError(404,'Gambar tidak ditemukan.');return name; }
   async put(name,bytes,mime='application/octet-stream') {
     this.valid(name);
     if(this.client) { const {error}=await this.client.storage.from(this.bucket).upload(name,bytes,{contentType:mime,upsert:false});if(error) throw new HttpError(503,'Unggah penyimpanan belum berhasil. Coba lagi.'); }
@@ -24,17 +24,17 @@ export class Storage {
     try { return await readFile(path.join(this.directory,name)); } catch { throw new HttpError(404,'File unggahan tidak ditemukan.'); }
   }
   async remove(name) { this.valid(name);if(this.client) await this.client.storage.from(this.bucket).remove([name]);else await unlink(path.join(this.directory,name)).catch(()=>{}); }
-  async signedMedia(name) {
+  async signedMedia(name,{expiresIn=60}={}) {
     this.valid(name);
     if(!this.client) return null;
-    const {data,error}=await this.client.storage.from(this.bucket).createSignedUrl(name,60);
+    const {data,error}=await this.client.storage.from(this.bucket).createSignedUrl(name,expiresIn);
     if(error) throw new HttpError(404,'Gambar tidak ditemukan.');return data.signedUrl;
   }
   async issue(db,user,input) {
     if(!this.client) throw new HttpError(400,'Unggah lokal melalui formulir.');
-    const kind=choice(input,'kind',['proof_ftw','proof_mine','spreadsheet','profile_photo']), extension=text(input,'extension',8).toLowerCase(),size=Number(input.size);
-    if(!Number.isSafeInteger(size)||size<=0||size>(kind==='spreadsheet'?10:kind==='profile_photo'?2:5)*1024*1024) throw new HttpError(422,'Ukuran unggahan melebihi batas.');
-    if(!(kind==='spreadsheet'?['xlsx','csv']:['png','jpg','jpeg','webp']).includes(extension)) throw new HttpError(422,'Format unggahan tidak didukung.');
+    const kind=choice(input,'kind',['proof_ftw','proof_mine','spreadsheet','profile_photo','cctv_media']), extension=text(input,'extension',8).toLowerCase(),size=Number(input.size);
+    if(!Number.isSafeInteger(size)||size<=0||size>(kind==='spreadsheet'?10:kind==='profile_photo'?2:kind==='cctv_media'&&['mp4','webm'].includes(extension)?20:5)*1024*1024) throw new HttpError(422,'Ukuran unggahan melebihi batas.');
+    if(!(kind==='spreadsheet'?['xlsx','csv']:kind==='cctv_media'?['png','jpg','jpeg','webp','mp4','webm']:['png','jpg','jpeg','webp']).includes(extension)) throw new HttpError(422,'Format unggahan tidak didukung.');
     const pending=await one(db,'SELECT count(*) AS n FROM fleetsync.upload_tickets WHERE user_id=$1 AND consumed_at IS NULL AND expires_at>now()',[user.id]);
     if(Number(pending.n)>=20) throw new HttpError(429,'Terlalu banyak unggahan tertunda. Coba lagi nanti.');
     const id=randomBytes(32).toString('hex'),ext=extension==='jpeg'?'jpg':extension,objectPath=`incoming/${user.id}/${id}.${ext}`;
@@ -48,9 +48,15 @@ export class Storage {
     const ticket=await one(db,'SELECT * FROM fleetsync.upload_tickets WHERE id=$1 AND user_id=$2 AND kind=$3 AND expires_at>now() AND consumed_at IS NULL FOR UPDATE',[id,user.id,kind]);
     if(!ticket) throw new HttpError(422,'Unggahan sudah digunakan atau kedaluwarsa. Pilih ulang file.');
     const bytes=await this.get(ticket.path);
-    if(bytes.length>(kind==='spreadsheet'?10:kind==='profile_photo'?2:5)*1024*1024) throw new HttpError(422,'Ukuran unggahan melebihi batas.');
+    if(bytes.length>(kind==='spreadsheet'?10:kind==='profile_photo'?2:kind==='cctv_media'&&['mp4','webm'].includes(ticket.extension)?20:5)*1024*1024) throw new HttpError(422,'Ukuran unggahan melebihi batas.');
     await db.query('UPDATE fleetsync.upload_tickets SET consumed_at=now() WHERE id=$1',[id]);
     return {bytes,extension:ticket.extension,temporaryPath:ticket.path};
+  }
+  async media(bytes,extension) {
+    if(!['mp4','webm'].includes(extension)){const path=await this.image(bytes);return{path,mime:path.endsWith('.png')?'image/png':path.endsWith('.webp')?'image/webp':'image/jpeg'};}
+    const valid=extension==='mp4'?bytes.length>=32&&bytes.toString('ascii',4,8)==='ftyp':bytes.length>=32&&bytes.subarray(0,4).equals(Buffer.from([0x1a,0x45,0xdf,0xa3]));
+    if(!valid||bytes.length>20*1024*1024)throw new HttpError(422,'Video harus MP4/WebM yang valid, maksimal 20 MB.');
+    const path=`uploads/${randomBytes(24).toString('hex')}.${extension}`,mime='video/'+extension;await this.put(path,bytes,mime);return{path,mime};
   }
   async image(bytes,{avatar=false}={}) {
     if(avatar&&bytes.length>2*1024*1024) throw new HttpError(422,'Foto profil maksimal 2 MB.');
