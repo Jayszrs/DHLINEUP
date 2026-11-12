@@ -3,14 +3,16 @@ import {createTruck,createDriver,animateCharacter} from '../fleet-models.js';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export class DHLineup3DViewer {
  constructor(host,{mode='all',unitId=''}={}){
-  this.host=host;this.mode=mode;this.unitId=/^DT\d{1,8}$/.test(unitId)?unitId:'';this.abort=new AbortController();this.frame=0;this.elapsed=0;this.last=0;this.yaw=.65;this.pitch=.3;this.zoom=1;this.pointers=new Map();this.visible=false;
+  this.host=host;this.mode=mode;this.unitId=/^DT\d{1,8}$/.test(unitId)?unitId:'';this.abort=new AbortController();this.frame=0;this.elapsed=0;this.last=0;this.yaw=.65;this.pitch=.3;this.zoom=1;this.pointers=new Map();this.visible=false;this.autoRotate=false;
   host.classList.add('dh3d');const viewport=document.createElement('div');viewport.className='dh3d__viewport';host.append(viewport);this.viewport=viewport;
   const canvas=document.createElement('canvas');canvas.tabIndex=0;canvas.setAttribute('aria-label','Model 3D, geser untuk memutar dan scroll untuk memperbesar');viewport.append(canvas);this.canvas=canvas;
   const toolbar=document.createElement('div');toolbar.className='dh3d__toolbar';toolbar.setAttribute('role','group');toolbar.setAttribute('aria-label','Tampilan aset 3D');host.append(toolbar);this.toolbar=toolbar;
   const button=(text,action,handler)=>{const b=document.createElement('button');b.type='button';b.className='subtle-button';b.textContent=text;b.dataset.dh3dAction=action;b.addEventListener('click',handler,{signal:this.abort.signal});toolbar.append(b);return b;};
   for(const [text,mode]of[['Semua','all'],['Pekerja','workers'],['Dump truck','truck']])button(text,mode,()=>this.setMode(mode));
+  const rotateLabel=document.createElement('label'),rotate=document.createElement('input');rotate.type='checkbox';rotate.addEventListener('change',()=>{this.autoRotate=rotate.checked;this.restart();},{signal:this.abort.signal});rotateLabel.append(rotate,document.createTextNode('Putar otomatis'));toolbar.append(rotateLabel);
   button('−','out',()=>this.setZoom(this.zoom/1.2));button('+','in',()=>this.setZoom(this.zoom*1.2));button('Reset','reset',()=>{this.yaw=.65;this.pitch=.3;this.zoom=1;this.draw();});
   const fullscreen=button('Layar penuh','fullscreen',async()=>{if(document.fullscreenElement===host)await document.exitFullscreen();else try{await host.requestFullscreen();}catch{host.classList.toggle('is-expanded');}this.resize();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&host.classList.contains('is-expanded')){host.classList.remove('is-expanded');this.resize();}},{signal:this.abort.signal});
   document.addEventListener('fullscreenchange',()=>{fullscreen.textContent=document.fullscreenElement===host?'Kecilkan':'Layar penuh';this.resize();},{signal:this.abort.signal});
   const tip=document.createElement('p');tip.className='dh3d__tip';tip.textContent='Geser untuk memutar · Scroll / pinch untuk zoom · Nomor DT contoh, bukan rekaman GPS';host.append(tip);
   try{
@@ -37,7 +39,7 @@ export class DHLineup3DViewer {
  setZoom(value){this.zoom=clamp(value,.3,4);this.draw();}
  resize(){if(!this.renderer)return;const w=Math.max(1,this.viewport.clientWidth),h=Math.max(1,this.viewport.clientHeight);this.renderer.setPixelRatio(Math.min(2,Math.sqrt(2400000/(w*h))));this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.draw();}
  draw(){if(!this.renderer||!this.content)return;const distance=this.radius/Math.sin(Math.atan(Math.tan(34*Math.PI/360)*Math.min(this.camera.aspect,1)))*1.05/this.zoom;this.camera.position.set(distance*Math.sin(this.yaw)*Math.cos(this.pitch),distance*Math.sin(this.pitch),distance*Math.cos(this.yaw)*Math.cos(this.pitch));this.camera.lookAt(0,0,0);this.renderer.render(this.scene,this.camera);this.host.dataset.dh3dZoom=this.zoom.toFixed(2);}
- restart(){cancelAnimationFrame(this.frame);this.last=0;if(!this.renderer||!this.visible||document.hidden||this.reduced?.matches||!this.characters?.length)return;const tick=t=>{this.frame=requestAnimationFrame(tick);if(this.last&&t-this.last<1000/30)return;this.elapsed+=this.last?Math.min((t-this.last)/1000,.06):0;this.last=t;this.characters.forEach((c,i)=>animateCharacter(c,this.elapsed,i));this.draw();};this.frame=requestAnimationFrame(tick);}
+ restart(){cancelAnimationFrame(this.frame);this.last=0;if(!this.renderer||!this.visible||document.hidden||this.reduced?.matches||(!this.characters?.length&&!this.autoRotate))return;const tick=t=>{this.frame=requestAnimationFrame(tick);if(this.last&&t-this.last<1000/30)return;const dt=this.last?Math.min((t-this.last)/1000,.06):0;this.elapsed+=dt;this.last=t;if(this.autoRotate)this.yaw+=dt*.16;this.characters.forEach((c,i)=>animateCharacter(c,this.elapsed,i));this.draw();};this.frame=requestAnimationFrame(tick);}
  destroy(){cancelAnimationFrame(this.frame);this.abort.abort();this.resizeObserver?.disconnect();this.observer?.disconnect();this.ground?.geometry.dispose();this.ground?.material.dispose();this.renderer?.dispose();this.renderer?.forceContextLoss();}
 }
 export function mountDHLineup3D(root=document){return [...root.querySelectorAll('[data-dh3d]')].map(host=>host.__dh3d|| (host.__dh3d=new DHLineup3DViewer(host,{mode:host.dataset.mode||'all',unitId:host.dataset.unit||''})));}
