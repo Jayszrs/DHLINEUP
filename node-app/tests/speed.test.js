@@ -29,6 +29,12 @@ test('speed module preserves weighted recaps, GPS archives, permissions and Line
    const filtered=await admin.get('/speed-dashboard?from=2026-10-01&to=2026-10-01');assert.equal(filtered.status,200);assert.ok(filtered.text.includes('Semua: 10,00 km/jam; bergerak: 20,00 km/jam'));assert.ok(!filtered.text.includes('Semua: 19,00 km/jam;'));
    const empty=await admin.get('/speed-dashboard?from=2027-01-01');assert.equal(empty.status,200);assert.ok(empty.text.includes('Belum ada unit berdata pada periode ini'));assert.ok(!empty.text.includes('class="comparison-bar all"'));
   });
+  await t.test('unit animation shows the selected DT and its own date-filtered top speed',async()=>{
+   const read=async query=>{const response=await admin.get('/speed-unit?unit=DT2322'+query);assert.equal(response.status,200);const match=response.text.match(/<script type="application\/json" data-unit-model>(.*?)<\/script>/s);assert.ok(match);return JSON.parse(match[1]);};
+   const all=await read('');assert.equal(all.unit,'DT2322');assert.equal(all.maxSpeed,50);assert.equal(all.peakDate,'2026-10-02');
+   const first=await read('&from=2026-10-01&to=2026-10-01');assert.equal(first.maxSpeed,30);assert.equal(first.movingAverage,20);assert.equal(first.peakDate,'2026-10-01');
+   const empty=await read('&from=2027-01-01');assert.equal(empty.maxSpeed,null);assert.equal(empty.peakDate,null);
+  });
   await t.test('manual save validates counts, applies optimistic versions and can delete one recap only',async()=>{
    assert.equal((await admin.post('/speed-save').type('form').send({...base,csrf,unit:'DT2695',moving_count:'11'})).status,422);
    const created=await admin.post('/speed-save').type('form').send({...base,csrf,unit:'DT2695'});assert.equal(created.status,303);assert.equal((await admin.post('/speed-save').type('form').send({...base,csrf,unit:'DT2695'})).status,409);

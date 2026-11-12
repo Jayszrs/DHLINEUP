@@ -1,5 +1,13 @@
 # Arah tampilan DH Line Up
 
+## Revisi visual 12 November 2026
+
+- Identitas utama: simbol DH oranye dan wordmark **DH** berukuran tegas, dengan **Operation Command Center** di bawah. Halaman modul tetap memakai nama Line Up, Speed, dan OCC JHO sesuai tugasnya.
+- Seluruh antarmuka memakai TT Firs Neue dari file Bold yang diberikan pengguna, termasuk isi, tabel, formulir, chart, label peta dan signage canvas. WOFF2 mengurangi transfer dari 243 KB menjadi 83 KB tanpa mengganti bentuk huruf. Hierarki memakai ukuran, spasi, dan warna teks; bobot Regular yang belum diberikan tidak disimulasikan.
+- Karakter utama menggantikan mesh prosedural lama dengan adaptasi CC BY dari Rain/Snow Blender Studio. Wajah/rambut asli dipertahankan, pakaian turquoise/navy dan pose kerja disesuaikan. Semua staf JHO tanpa helm; driver tambang berhelm. Enam identitas dan dua meja depan/empat belakang tetap sesuai sumber pengguna. Kredit aset ditampilkan di dekat visual.
+- DT memakai model rigid hauler yang lebih detail dengan enam ban, ban belakang ganda, railing, tangga akses, kabin dan bak tertutup. Nomor kendaraan selalu berasal dari unit aktif. Animasi per unit berada di bawah rekap, dilengkapi top speed dan tanggalnya, dengan tautan langsung dari tab unit. Latar merupakan ilustrasi jalan tambang dan gerak mengikuti rata-rata periode, bukan posisi GPS langsung.
+- Mode utama tetap Operate: font konsisten dan data terbaca. Pembesaran, orbit dan layar penuh melayani pemeriksaan model; gerak kendaraan/staf memenuhi permintaan simulasi pengguna dan berhenti ketika visual/tab tidak terlihat atau reduced motion aktif. Tidak ada animasi dekoratif baru pada card atau teks.
+
 - Sidebar mengelompokkan Dashboard, DH Line Up, Operator, Riwayat Perubahan, dan Kelola Akun ke dalam menu native details **Recap DH Line Up**. Kelompoknya otomatis terbuka pada halaman terkait, termasuk formulir/detail; halaman aktif tetap ditandai. Kelompok **Recap Fleet Speed Monitoring** berdiri sejajar di bawahnya. Keduanya dapat dibuka/tutup melalui mouse maupun keyboard.
 
 - Profil akun menampilkan foto di sebelah identitas pada desktop dan di atas identitas pada ponsel. Nama lengkap, username, NIK, dan site disimpan per akun. Foto memiliki preview, pembesaran, batal pilihan, serta hapus saat menyimpan. Tanpa foto, gunakan inisial. Foto tersimpan menggantikan inisial pada menu akun; mode terang/gelap mengikuti token yang sama. NIK/site yang belum diketahui dibiarkan kosong, tidak diisi dari data Operator.

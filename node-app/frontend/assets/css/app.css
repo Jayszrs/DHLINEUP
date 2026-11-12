@@ -1,6 +1,6 @@
 @font-face {
   font-family:'TT Firs Neue';
-  src:url('../fonts/tt-firs-neue-bold.ttf') format('truetype');
+  src:url('../fonts/tt-firs-neue-bold.woff2') format('woff2'),url('../fonts/tt-firs-neue-bold.ttf') format('truetype');
   font-weight:700;
   font-style:normal;
   font-display:swap
@@ -31,8 +31,8 @@
 .comparison-viewport{width:100%;min-width:0;overflow-x:auto;overscroll-behavior-x:contain}
 .comparison-svg{display:block;width:100%;height:auto;min-width:700px}
 .comparison-svg.comparison-detail{max-width:none;height:360px}
-.comparison-axis{font:12px 'Segoe UI',sans-serif;fill:var(--muted)}
-.comparison-unit{font:11px 'Segoe UI',sans-serif;fill:var(--muted)}
+.comparison-axis{font:12px 'TT Firs Neue',sans-serif;fill:var(--muted)}
+.comparison-unit{font:11px 'TT Firs Neue',sans-serif;fill:var(--muted)}
 .comparison-bar.all{fill:var(--comparison-all)}
 .comparison-bar.moving{fill:var(--comparison-moving)}
 .comparison-svg a:hover .comparison-bar{opacity:.78}
@@ -53,7 +53,7 @@
 .speed-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;padding:0 0 24px;border-bottom:1px solid var(--line);margin-bottom:20px}
 .speed-metrics>div>span{display:block;font-size:12px;color:var(--muted);margin-bottom:10px}
 .speed-metrics strong{display:block;font-size:28px;line-height:1.2;overflow-wrap:anywhere}
-.speed-metrics small{font:400 11px 'Segoe UI',sans-serif;color:var(--muted)}
+.speed-metrics small{font:400 11px 'TT Firs Neue',sans-serif;color:var(--muted)}
 .speed-context{display:flex;flex-wrap:wrap;gap:12px 24px;color:var(--muted);font-size:12px;margin:0 0 20px}
 .speed-context strong{color:var(--ink)}
 .section-heading{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:24px 0 14px}
@@ -143,7 +143,7 @@
 @media(max-width:700px){.catalog-remove,.catalog-remove-confirm button{min-height:44px}}
 @media(max-width:850px){.equipment-inputs{grid-template-columns:1fr}}
 :root {
-  font-family:'Segoe UI',Arial,sans-serif;
+  font-family:'TT Firs Neue',Arial,sans-serif;
   font-size:14px;
   line-height:1.5;
   font-synthesis:none;
@@ -227,7 +227,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   display:none!important
 }
 h1,h2,h3,h4,strong,b,.btn,.subtle-button,.top-add,.nav-item,button {
-  font-family:'TT Firs Neue','Segoe UI',sans-serif;
+  font-family:'TT Firs Neue',sans-serif;
   font-weight:700
 }
 h1,h2,h3,h4,p {
@@ -872,7 +872,7 @@ small {
   font-size:12px
 }
 .period-head span {
-  font:11px 'Segoe UI',sans-serif;
+  font:11px 'TT Firs Neue',sans-serif;
   color:var(--muted)
 }
 .period-body {

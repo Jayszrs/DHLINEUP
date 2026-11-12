@@ -1,5 +1,7 @@
 ﻿import * as THREE from '../vendor/three.module.js';
 import {createTruck,createDriver,animateCharacter} from '../fleet-models.js';
+import {loadStudioCharacters} from '../studio-characters.js';
+await loadStudioCharacters();
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export class DHLineup3DViewer {
  constructor(host,{mode='all',unitId=''}={}){

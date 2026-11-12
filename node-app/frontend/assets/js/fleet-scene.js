@@ -3,6 +3,10 @@ import {createTruck,createDriver,animateCharacter,createAssignmentStand,createFl
 import {openObjectPreview} from './object-preview.js';
 import {createOccActivity} from './occ-activity.js';
 import {jakartaClock,roomSchedule,clockText} from './occ-schedule.js';
+import {loadStudioCharacters} from './studio-characters.js';
+
+const studioScenes=[...document.querySelectorAll('[data-fleet-scene="lineup"],[data-fleet-scene="occ"]')];
+if(studioScenes.length){for(const host of studioScenes)host.dataset.assetsLoading='true';try{await loadStudioCharacters();}finally{for(const host of studioScenes)delete host.dataset.assetsLoading;}}
 
 const number=new Intl.NumberFormat('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
 const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));

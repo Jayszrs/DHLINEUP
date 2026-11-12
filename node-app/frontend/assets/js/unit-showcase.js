@@ -1,0 +1,29 @@
+import * as THREE from './vendor/three.module.js';
+import {createTruck,createMineRoad} from './fleet-models.js';
+import {openObjectPreview} from './object-preview.js';
+await document.fonts.load('700 16px "TT Firs Neue"');
+
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+for(const host of document.querySelectorAll('[data-unit-showcase]')){
+ const data=JSON.parse(host.querySelector('[data-unit-model]').textContent),stage=host.querySelector('.unit-showcase-stage'),canvas=host.querySelector('canvas'),error=host.querySelector('.unit-model-error');
+ let renderer;try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});}catch{error.hidden=false;canvas.hidden=true;continue;}
+ renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ const scene=new THREE.Scene();scene.background=new THREE.Color(0xd8ccb7);
+ scene.add(new THREE.HemisphereLight(0xfff8e9,0x75644d,2));const sun=new THREE.DirectionalLight(0xffedcd,3);sun.position.set(5,10,8);scene.add(sun);const fill=new THREE.DirectionalLight(0xc6d7df,.8);fill.position.set(-5,5,-5);scene.add(fill);
+ sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-7,right:7,top:7,bottom:-7,near:.1,far:35});sun.shadow.bias=-.0004;sun.shadow.normalBias=.025;sun.shadow.camera.updateProjectionMatrix();
+ const truck=createTruck(data.unit),road=createMineRoad();truck.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});road.traverse(o=>{if(o.isMesh)o.receiveShadow=true;});scene.add(road,truck);truck.position.y=-.025;
+ const camera=new THREE.PerspectiveCamera(36,1,.1,100),target=new THREE.Vector3(0,1.8,0),reduced=matchMedia('(prefers-reduced-motion: reduce)');
+ let yaw=.76,pitch=.30,zoom=1,width=1,height=1,visible=false,last=0,frame=0,offset=0,start=null,dragged=false;
+ const speed=Number(data.movingAverage)||0;
+ function draw(){const radius=12/zoom;camera.position.set(target.x+Math.cos(pitch)*Math.cos(yaw)*radius,target.y+Math.sin(pitch)*radius,target.z+Math.cos(pitch)*Math.sin(yaw)*radius);camera.lookAt(target);renderer.render(scene,camera);}
+ function resize(){const rect=stage.getBoundingClientRect();width=Math.max(1,rect.width);height=Math.max(1,rect.height);renderer.setPixelRatio(Math.min(2,devicePixelRatio||1,Math.sqrt(1600000/(width*height))));renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();draw();}
+ function tick(time){frame=0;if(!visible||document.hidden||reduced.matches||speed<=0)return;if(last&&time-last<1000/30){frame=requestAnimationFrame(tick);return;}const dt=last?Math.min((time-last)/1000,.065):0;last=time;const distance=dt*speed/3.6;offset=(offset+distance)%18;road.position.x=-offset;for(const wheel of truck.userData.wheels||[])wheel.rotation.z-=distance/.7;host.dataset.terrainOffset=offset.toFixed(3);draw();frame=requestAnimationFrame(tick);}
+ function restart(){cancelAnimationFrame(frame);frame=0;last=0;if(visible&&!document.hidden&&!reduced.matches&&speed>0)frame=requestAnimationFrame(tick);else draw();}
+ function preview(){openObjectPreview({title:data.unit,subtitle:'Rekap unit pada periode pilihan',model:createTruck(data.unit),moving:speed>0,speed,parked:!speed,rows:[['Unit DT',data.unit],['Top speed',data.maxSpeed==null?'Belum terdata':Number(data.maxSpeed).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2})+' km/jam'],['Rata-rata saat bergerak',data.movingAverage==null?'Belum terdata':Number(data.movingAverage).toLocaleString('id-ID',{maximumFractionDigits:2})+' km/jam'],['Tanggal top speed',data.peakDate||'Belum terdata']]});}
+ host.querySelector('[data-unit-preview]').addEventListener('click',preview);
+ canvas.addEventListener('pointerdown',e=>{start={x:e.clientX,y:e.clientY,yaw,pitch};dragged=false;canvas.setPointerCapture(e.pointerId);});canvas.addEventListener('pointermove',e=>{if(!start)return;if(Math.hypot(e.clientX-start.x,e.clientY-start.y)>5)dragged=true;yaw=start.yaw-(e.clientX-start.x)*.007;pitch=clamp(start.pitch+(e.clientY-start.y)*.005,.1,1.2);draw();});canvas.addEventListener('pointerup',()=>{if(start&&!dragged)preview();start=null;});canvas.addEventListener('pointercancel',()=>start=null);canvas.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();preview();}});
+ stage.addEventListener('wheel',e=>{e.preventDefault();zoom=clamp(zoom*Math.exp(-clamp(e.deltaY,-600,600)*.0015),.35,3);stage.dataset.zoom=zoom.toFixed(2);draw();},{passive:false});
+ for(const button of host.querySelectorAll('[data-unit-zoom]'))button.addEventListener('click',()=>{zoom=clamp(zoom*(button.dataset.unitZoom==='in'?1.2:1/1.2),.35,3);stage.dataset.zoom=zoom.toFixed(2);draw();});host.querySelector('[data-unit-reset]').addEventListener('click',()=>{zoom=1;yaw=.76;pitch=.30;stage.dataset.zoom='1.00';draw();});
+ const full=host.querySelector('[data-unit-fullscreen]');full.addEventListener('click',async()=>{if(document.fullscreenElement===stage)await document.exitFullscreen();else if(stage.classList.contains('is-unit-expanded'))stage.classList.remove('is-unit-expanded');else try{await stage.requestFullscreen();}catch{stage.classList.add('is-unit-expanded');}resize();});document.addEventListener('fullscreenchange',()=>{full.textContent=document.fullscreenElement===stage?'Kecilkan':'Layar penuh';resize();});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&stage.classList.contains('is-unit-expanded')){stage.classList.remove('is-unit-expanded');resize();}});
+ const observer=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;restart();});observer.observe(stage);new ResizeObserver(resize).observe(stage);document.addEventListener('visibilitychange',restart);reduced.addEventListener('change',restart);resize();host.dataset.modelReady='true';host.dataset.unit=data.unit;
+}

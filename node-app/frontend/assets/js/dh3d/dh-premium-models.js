@@ -1,13 +1,24 @@
 /**
- * DHLINEUP: original procedural 3D concept models.
- * Compatible with the project's existing Three.js vendor module.
- * These meshes are NOT a photogrammetric reconstruction of the reference CGI.
- * They are editable Three.js geometry to be refined against the included design sheets.
+ * DH model adapters and retained V3 reference geometry.
+ * Current characters adapt Blender Studio's CC-BY Rain/Snow assets; the current
+ * hauler is authored in studio-haul-truck.js. Source attribution ships with the
+ * GLBs. The older procedural geometry remains available as a lightweight fallback.
  */
 import * as THREE from '../vendor/three.module.js';
 import {RoundedBoxGeometry} from '../vendor/RoundedBoxGeometry.js';
-export {createStudioWorker as createWorker} from './dh-premium-characters.js';
-import {createStudioWorker as createWorker} from './dh-premium-characters.js';
+import {createStudioWorker as createFallbackWorker} from './dh-premium-characters.js';
+import {createStudioCharacter} from '../studio-characters.js';
+import {createDetailedHaulTruck} from '../studio-haul-truck.js';
+export function createDumpTruck({unitId='',payload=true}={}){
+ const candidate=String(unitId).trim().toUpperCase(),number=/^DT\d{1,8}$/.test(candidate)?candidate:'';
+ const root=createDetailedHaulTruck({payload});
+ if(number){plate(root,number,[1.65,.45],[0,4.83,3.789]);for(const side of[-1,1])plate(root,number,[1.02,.36],[side*2.25,3.82,-.45],{rotation:[0,side*Math.PI/2,0]});plate(root,number,[1.46,.42],[0,3.01,3.411]);}
+ root.userData.unitId=number;return root;
+}
+export function createWorker(options={}){
+ const {gender='male',pose='hero',helmet=true,seat=1}=options;
+ return createStudioCharacter({female:gender==='female',seated:pose==='seated'||pose==='portrait',relaxed:pose==='portrait',helmet,seat})||createFallbackWorker(options);
+}
 
 const PALETTE = Object.freeze({
   blue: 0x00a7e1, blueLight: 0x10aee5, blueDeep: 0x096d9f,
@@ -110,7 +121,7 @@ function rock(root,loc,size,seed) {
   obj.scale.set(1+(seed%3)*.12,.68+(seed%5)*.06,1.1);obj.rotation.set(seed*.13,seed*.91,seed*.23);return obj;
 }
 /** Industrial CAT-777-class inspired mining DT, intentionally not engineering-CAD accurate. */
-export function createDumpTruck({unitId='', payload=true}={}) {
+function createLegacyDumpTruck({unitId='', payload=true}={}) {
   const candidate=String(unitId).trim().toUpperCase(),number=/^DT\d{1,8}$/.test(candidate)?candidate:'';
   const root=new THREE.Group();root.name=`DH_Mining_Truck_${number}`;
   const lower=new THREE.Group();lower.name='truck_chassis';root.add(lower);

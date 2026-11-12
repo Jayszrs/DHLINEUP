@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import {RoundedBoxGeometry} from './vendor/RoundedBoxGeometry.js';
 import {OCC_TEAM} from './occ-team.js';
+import {createStudioCharacter,animateStudioCharacter} from './studio-characters.js';
 import {createWorker as createV3Worker,createDumpTruck as createV3Truck} from './dh3d/dh-premium-models.js';
 
 const materials=new Map(),geometries=new Map(),bakedMaterials=new Map();
@@ -18,7 +19,7 @@ function roundBox(parent,w,h,d,x,y,z,color,radius=.08,rotation){const key=`round
 const decalMaterials=new Map();
 function decal(text,background='#137050',foreground='#fff',brand=false){
  const key=[text,background,foreground,brand].join(':');if(decalMaterials.has(key))return decalMaterials.get(key);if(typeof document==='undefined')return material(0x137050);
- const canvas=document.createElement('canvas');canvas.width=512;canvas.height=144;const c=canvas.getContext('2d');c.fillStyle=background;c.fillRect(0,0,512,144);c.fillStyle=foreground;c.font='bold 96px Segoe UI';c.textAlign='center';c.textBaseline='middle';c.fillText(text,brand?323:256,80,brand?330:480);
+ const canvas=document.createElement('canvas');canvas.width=512;canvas.height=144;const c=canvas.getContext('2d');c.fillStyle=background;c.fillRect(0,0,512,144);c.fillStyle=foreground;c.font='bold 96px TT Firs Neue';c.textAlign='center';c.textBaseline='middle';c.fillText(text,brand?323:256,80,brand?330:480);
  if(brand){const logo=document.querySelector('.brand-signature img');if(logo?.complete&&logo.naturalWidth)c.drawImage(logo,28,22,110,100);}
  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const mat=new THREE.MeshBasicMaterial({map:texture,toneMapped:false});decalMaterials.set(key,mat);return mat;
 }
@@ -59,9 +60,10 @@ function premiumTruck(){
 }
 export function createTruck(unit=''){
  const root=premiumTruck();root.add(contactShadow(6.7,4.1));
+ plate(root,'DH',.74,.30,2.43,3.09,1.03,false,true);
  const identity=String(unit||'').trim().toUpperCase(),valid=/^DT\d{1,8}$/.test(identity);
  if(valid){plate(root,identity,1.13,.31,2.43,3.09,0);plate(root,identity,.72,.27,-.29,2.44,1.38,true);const opposite=plate(root,identity,.72,.27,-.29,2.44,-1.38,true);opposite.rotation.y=Math.PI;plate(root,identity,1.3,.28,2.19,1.93,0);}
- root.userData={...root.userData,unit:valid?identity:'',identityTexts:valid?[identity,identity,identity,identity]:[],labelHeight:4.5,sourcePack:'DHLINEUP_3D_CODEX_V3',modelFeatures:['supplied V3 loaded haul truck','golden canopy','ore load','four mining tires','safety rails','live unit identity plates']};return root;
+ root.userData={...root.userData,unit:valid?identity:'',identityTexts:valid?[identity,identity,identity,identity]:[],labelHeight:4.5,sourcePack:'DH original detailed hauler',modelFeatures:['detailed rigid mining hauler','golden canopy','ore load','six mining tires with dual rear wheels','safety rails','live unit identity plates']};return root;
 }
 
 let parkingPrototype;
@@ -91,7 +93,7 @@ export function createMineRoad(){
 // The user's V3 source supplies bodies, faces, uniforms and vehicle geometry.
 // Bake surfaces inside each named joint; keep rig transforms independent per clone.
 const crewPrototypes=new Map();
-function seatNumberMaterial(seat){const key='seat-number:'+seat;if(!decalMaterials.has(key)){const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const c=canvas.getContext('2d');c.fillStyle='#e5edef';c.fillRect(0,0,128,128);c.fillStyle='#183b48';c.font='bold 84px Segoe UI';c.textAlign='center';c.textBaseline='middle';c.fillText(String(seat),64,69);const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;decalMaterials.set(key,new THREE.MeshBasicMaterial({map,toneMapped:false}));}return decalMaterials.get(key);}
+function seatNumberMaterial(seat){const key='seat-number:'+seat;if(!decalMaterials.has(key)){const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const c=canvas.getContext('2d');c.fillStyle='#e5edef';c.fillRect(0,0,128,128);c.fillStyle='#183b48';c.font='bold 84px TT Firs Neue';c.textAlign='center';c.textBaseline='middle';c.fillText(String(seat),64,69);const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;decalMaterials.set(key,new THREE.MeshBasicMaterial({map,toneMapped:false}));}return decalMaterials.get(key);}
 function bakeJoint(part){
  const position=part.position.clone(),rotation=part.quaternion.clone(),scale=part.scale.clone(),rig=[];
  for(const child of [...part.children])if(child.name.startsWith('character-')){child.removeFromParent();rig.push(child.isGroup?bakeJoint(child):child);}
@@ -99,6 +101,7 @@ function bakeJoint(part){
  const result=bake(part);result.name=part.name;result.userData={...part.userData};if(rig.length)result.add(...rig);result.position.copy(position);result.quaternion.copy(rotation);result.scale.copy(scale);return result;
 }
 function crewCharacter({seated=false,female=false,seat=1,helmet=false,clipboard=false,relaxed=false}={}){
+ const studio=createStudioCharacter({seated,female,seat,helmet,relaxed});if(studio)return studio;
  const key=[seated,female,seat,helmet,clipboard,relaxed].join(':');if(!crewPrototypes.has(key)){
   const source=createV3Worker({gender:female?'female':'male',pose:seated?(relaxed?'portrait':'seated'):helmet?'hero':'walking',helmet,clipboard,seat}),root=new THREE.Group(),scaled=new THREE.Group();
   for(const child of [...source.children])scaled.add(bakeJoint(child));scaled.scale.setScalar(.64);root.add(scaled);
@@ -108,7 +111,7 @@ function crewCharacter({seated=false,female=false,seat=1,helmet=false,clipboard=
  return crewPrototypes.get(key).clone();
 }
 export function orientCharacter(root,heading){root.rotation.set(0,heading,0);return root;}
-export function animateCharacter(root,time,phase=0){const head=root.getObjectByName('character-head');if(head){head.rotation.y=Math.sin(time*.6+phase)*.035;head.rotation.z=Math.sin(time*.85+phase)*.013;head.rotation.x=root.userData.seated&&!root.userData.relaxed?.055:0;const cycle=(time+phase*.63)%5.2,aperture=cycle>4.96?1-Math.sin((cycle-4.96)/.24*Math.PI)*.94:1;for(const side of['left','right']){const eye=head.getObjectByName('character-eye-'+side);if(eye)eye.scale.y=aperture;}}for(const side of['left','right']){const arm=root.getObjectByName('character-'+side+'-arm');if(arm)arm.rotation.x=(arm.userData.baseArmX||0)+Math.sin(time*(root.userData.relaxed?.8:root.userData.seated?3.2:.7)+phase+(side==='left'?1:0))*(root.userData.relaxed?.008:root.userData.seated?.025:.012);}}
+export function animateCharacter(root,time,phase=0){if(root.userData.studioCharacter){animateStudioCharacter(root,time,phase);return;}const head=root.getObjectByName('character-head');if(head){head.rotation.y=Math.sin(time*.6+phase)*.035;head.rotation.z=Math.sin(time*.85+phase)*.013;head.rotation.x=root.userData.seated&&!root.userData.relaxed?.055:0;const cycle=(time+phase*.63)%5.2,aperture=cycle>4.96?1-Math.sin((cycle-4.96)/.24*Math.PI)*.94:1;for(const side of['left','right']){const eye=head.getObjectByName('character-eye-'+side);if(eye)eye.scale.y=aperture;}}for(const side of['left','right']){const arm=root.getObjectByName('character-'+side+'-arm');if(arm)arm.rotation.x=(arm.userData.baseArmX||0)+Math.sin(time*(root.userData.relaxed?.8:root.userData.seated?3.2:.7)+phase+(side==='left'?1:0))*(root.userData.relaxed?.008:root.userData.seated?.025:.012);}}
 export function createDriver(gender='male'){const driver=crewCharacter({female:gender==='female',helmet:true,clipboard:gender==='female'});driver.add(contactShadow(1.65,1.2));return driver;}
 
 let standPrototype;
@@ -142,7 +145,7 @@ function chair(g,x,z,angle,pixel){
 const workstationScreenMaterials=new Map();
 export function workstationScreen(state='off'){
  if(workstationScreenMaterials.has(state))return workstationScreenMaterials.get(state);let mat;
- if(typeof document==='undefined')mat=new THREE.MeshBasicMaterial({color:state==='off'?0x14202a:0x1266bd});else{const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;const c=canvas.getContext('2d');c.fillStyle=state==='off'?'#08131b':state==='idle'?'#172c3d':'#08264e';c.fillRect(0,0,512,256);if(state!=='off'){c.fillStyle='#f08b21';c.fillRect(0,0,512,28);c.fillStyle='#d8edff';c.font='bold 22px Segoe UI';c.fillText(state==='idle'?'ISTIRAHAT':'OCC  /  WORKSTATION',24,66);if(state==='on'){c.fillStyle='#246eab';for(let i=0;i<4;i++)c.fillRect(24+i*117,92,100,36);c.strokeStyle='#58c7bd';c.lineWidth=4;c.beginPath();for(let i=0;i<12;i++){const x=30+i*40,y=180+Math.sin(i*.8)*24;i?c.lineTo(x,y):c.moveTo(x,y);}c.stroke();}}const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;mat=new THREE.MeshBasicMaterial({map:texture,toneMapped:false});}workstationScreenMaterials.set(state,mat);return mat;
+ if(typeof document==='undefined')mat=new THREE.MeshBasicMaterial({color:state==='off'?0x14202a:0x1266bd});else{const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;const c=canvas.getContext('2d');c.fillStyle=state==='off'?'#08131b':state==='idle'?'#172c3d':'#08264e';c.fillRect(0,0,512,256);if(state!=='off'){c.fillStyle='#f08b21';c.fillRect(0,0,512,28);c.fillStyle='#d8edff';c.font='bold 22px TT Firs Neue';c.fillText(state==='idle'?'ISTIRAHAT':'OCC  /  WORKSTATION',24,66);if(state==='on'){c.fillStyle='#246eab';for(let i=0;i<4;i++)c.fillRect(24+i*117,92,100,36);c.strokeStyle='#58c7bd';c.lineWidth=4;c.beginPath();for(let i=0;i<12;i++){const x=30+i*40,y=180+Math.sin(i*.8)*24;i?c.lineTo(x,y):c.moveTo(x,y);}c.stroke();}}const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;mat=new THREE.MeshBasicMaterial({map:texture,toneMapped:false});}workstationScreenMaterials.set(state,mat);return mat;
 }
 function monitor(g,x,z,angle=0){const unit=new THREE.Group();unit.position.set(x,1.46,z);unit.rotation.y=angle;g.add(unit);box(unit,.92,.55,.06,0,.42,0,0x222f37);const screen=mesh(unit,new THREE.PlaneGeometry(.81,.43),workstationScreen('off'),0,.43,.045);screen.userData={monitorScreen:true,keepDynamic:true};box(unit,.05,.28,.05,0,.06,0,0x3c484c);box(unit,.42,.035,.24,0,-.055,.03,0x46545a);box(unit,.7,.025,.25,0,-.06,.4,0x677174);}
 export function createOccWalker(seat=1){const person=OCC_TEAM.find(p=>p.seat===seat);return crewCharacter({seated:false,female:person?.gender==='female',seat});}
@@ -186,13 +189,13 @@ function occScreenMaterial(){
  if(typeof document==='undefined')return material(0x12365b);
  const canvas=document.createElement('canvas');canvas.width=1800;canvas.height=400;const c=canvas.getContext('2d');
  c.fillStyle='#060c1d';c.fillRect(0,0,1800,400);
- for(let panel=0;panel<2;panel++){const x=panel*900;c.fillStyle='#ad351b';c.fillRect(x+10,10,880,66);c.fillStyle='#ea7b35';for(let i=0;i<8;i++)c.fillRect(x+25+i*115,18,75,8);c.fillStyle='#f9e3c0';c.font='bold 18px Segoe UI';c.fillText(panel?'OCC JHO  /  VIDEO CONFERENCE':'OCC JHO  /  OPERATIONS DISPLAY',x+25,59);
+ for(let panel=0;panel<2;panel++){const x=panel*900;c.fillStyle='#ad351b';c.fillRect(x+10,10,880,66);c.fillStyle='#ea7b35';for(let i=0;i<8;i++)c.fillRect(x+25+i*115,18,75,8);c.fillStyle='#f9e3c0';c.font='bold 18px TT Firs Neue';c.fillText(panel?'OCC JHO  /  VIDEO CONFERENCE':'OCC JHO  /  OPERATIONS DISPLAY',x+25,59);
   c.fillStyle='#102c53';c.fillRect(x+12,82,548,266);c.fillStyle='#193e6b';c.fillRect(x+22,94,526,244);
   c.strokeStyle='#527bc0';c.lineWidth=4;c.beginPath();for(let i=0;i<11;i++){const px=x+45+i*46,py=145+Math.sin(i*.9+panel)*55+i*9;i?c.lineTo(px,py):c.moveTo(px,py);}c.stroke();
   c.strokeStyle='#dfac48';c.lineWidth=3;c.beginPath();c.moveTo(x+45,285);c.lineTo(x+160,230);c.lineTo(x+245,264);c.lineTo(x+390,166);c.lineTo(x+505,210);c.stroke();
   for(let i=0;i<5;i++){const px=x+75+i*98,py=164+Math.sin(i*1.4)*55;c.fillStyle='#a2cfeb';c.beginPath();c.arc(px,py,7,0,Math.PI*2);c.fill();}
   for(let i=0;i<4;i++){const px=x+572+(i%2)*158,py=84+Math.floor(i/2)*134;c.fillStyle=i%2?'#4c2768':'#22385e';c.fillRect(px,py,148,124);c.fillStyle='#354d65';c.fillRect(px+10,py+8,128,64);c.fillStyle='#d7b69b';c.beginPath();c.arc(px+74,py+42,16,0,Math.PI*2);c.fill();c.fillStyle=i%2?'#5f8a8d':'#7287ad';c.beginPath();c.ellipse(px+74,py+87,32,27,0,0,Math.PI*2);c.fill();c.fillStyle='#cadbe8';c.fillRect(px+13,py+109,90,3);}
-  c.fillStyle='#13314d';c.fillRect(x+12,354,876,32);c.fillStyle='#b9d1e0';c.font='14px Segoe UI';c.fillText('ILUSTRASI TAMPILAN OCC  ·  BUKAN SIARAN LANGSUNG',x+25,376);
+  c.fillStyle='#13314d';c.fillRect(x+12,354,876,32);c.fillStyle='#b9d1e0';c.font='14px TT Firs Neue';c.fillText('ILUSTRASI TAMPILAN OCC  ·  BUKAN SIARAN LANGSUNG',x+25,376);
  }
  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;screenMaterial=new THREE.MeshBasicMaterial({map:texture,toneMapped:false});return screenMaterial;
 }
@@ -210,7 +213,7 @@ function glassPanel(g,x,z,depth,height=4.3){
 }
 function officeSign(g,text,x,y,z){
  box(g,3.5,.6,.09,x,y,z,0x243b42);if(typeof document==='undefined')return;
- const canvas=document.createElement('canvas');canvas.width=512;canvas.height=96;const c=canvas.getContext('2d');c.fillStyle='#243b42';c.fillRect(0,0,512,96);c.fillStyle='#edf3ef';c.font='bold 48px Segoe UI';c.textAlign='center';c.textBaseline='middle';c.fillText(text,256,49);const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;mesh(g,new THREE.PlaneGeometry(3.45,.57),new THREE.MeshBasicMaterial({map:texture,toneMapped:false}),x,y,z+.051);
+ const canvas=document.createElement('canvas');canvas.width=512;canvas.height=96;const c=canvas.getContext('2d');c.fillStyle='#243b42';c.fillRect(0,0,512,96);c.fillStyle='#edf3ef';c.font='bold 48px TT Firs Neue';c.textAlign='center';c.textBaseline='middle';c.fillText(text,256,49);const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;mesh(g,new THREE.PlaneGeometry(3.45,.57),new THREE.MeshBasicMaterial({map:texture,toneMapped:false}),x,y,z+.051);
 }
 function sideOffice(g,name,pixel){
  box(g,4.8,.25,19.6,0,-.12,0,0xa9aaa5);box(g,4.65,.04,19.35,0,.025,0,0xb7c3bc);box(g,4.8,3.9,.14,0,1.95,-9.7,0x546568);officeSign(g,name,0,3.28,-9.59);
@@ -277,5 +280,5 @@ function makeRoom(pixel){
  const result=bake(g);result.add(...people);result.userData={layout:'u-conference-table-and-six-workstations-behind',sideRooms:{left:'IT',right:'Engineer',partition:'glass'},team:OCC_TEAM,workstationCount:6,workstationRows:[2,4],workstationPositions:positions,workstationChairCount:6,meetingChairCount:12,meetingChairSides:{left:4,crossbar:4,right:4},meetingChairPositions:meetingSeats,meetingTableCount:1,meetingTableShape:'rectangular-U-open-toward-video-wall',meetingTableParts:3,videoWallCount:1,videoWallContent:'illustrative-command-centre-display',kandaoCount:1,ptzCount:1,ceilingSpeakerCount:6,speakerStyle:'six-hanging-speakers',tableMicCount:10,tableMicSides:{left:4,right:4,crossbar:2},workstationMicCount:0,floor:32,frontDirection:'negative-z',illustrativeLayout:true,roomSize:[24,6.45,21.6],roomBounds:{min:[-12,-.4,-10.1],max:[12,6.45,11.5]},objects,hotspotAnchors:{camera:[0,5.85,-9.03],audio:[-4.8,5.95,-1],display:[.3,4.7,-9.4],workstation:[4.5,2.35,6.5],control:[2.74,1.9,-1.9]}};return result;
 }
 
-export function createOccRoom(pixel=true){const key=pixel?'pixel':'smooth';if(!roomPrototypes.has(key)){const room=makeRoom(pixel);for(const z of[3.2,6.7]){const shade=contactShadow(13,3.15);shade.position.set(0,.035,z+.4);room.add(shade);}for(const x of[-3.6,3.6]){const shade=contactShadow(3.4,8.2);shade.position.set(x,.035,-5);room.add(shade);}const crossbarShade=contactShadow(10,2.8);crossbarShade.position.set(0,.035,-1.9);room.add(crossbarShade);roomPrototypes.set(key,room);}return roomPrototypes.get(key).clone();}
+export function createOccRoom(pixel=true){const key=pixel?'pixel':'smooth';if(!roomPrototypes.has(key)){const room=makeRoom(pixel);for(const z of[3.2,6.7]){const shade=contactShadow(13,3.15);shade.position.set(0,.035,z+.4);room.add(shade);}for(const x of[-3.6,3.6]){const shade=contactShadow(3.4,8.2);shade.position.set(x,.035,-5);room.add(shade);}const crossbarShade=contactShadow(10,2.8);crossbarShade.position.set(0,.035,-1.9);room.add(crossbarShade);roomPrototypes.set(key,room);}const copy=roomPrototypes.get(key).clone();const actors=[];copy.traverse(node=>{if(node.userData.studioCharacter)actors.push(node);});for(const actor of actors){const replacement=createOccPerson(actor.userData.seat);replacement.name=actor.name;replacement.position.copy(actor.position);replacement.quaternion.copy(actor.quaternion);replacement.scale.copy(actor.scale);actor.parent.add(replacement);actor.removeFromParent();}return copy;}
 export function createSelectionMarker(radius=2.15){const key='ring:'+radius;if(!geometries.has(key))geometries.set(key,new THREE.RingGeometry(radius-.035,radius,64));const marker=new THREE.Mesh(geometries.get(key),material(0xb97521));marker.rotation.x=-Math.PI/2;marker.position.y=.045;marker.visible=false;return marker;}

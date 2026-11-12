@@ -6,12 +6,16 @@ const root=new URL('../../',import.meta.url);
 await mkdir(new URL('public/assets/',root),{recursive:true});
 await mkdir(new URL('frontend/assets/js/vendor/',root),{recursive:true});
 const rounded=await readFile(new URL('node_modules/three/examples/jsm/geometries/RoundedBoxGeometry.js',root),'utf8');await writeFile(new URL('frontend/assets/js/vendor/RoundedBoxGeometry.js',root),rounded.replace("from 'three'","from './three.module.js'"));
+for(const [source,destination]of [['loaders/GLTFLoader.js','GLTFLoader.js'],['utils/BufferGeometryUtils.js','BufferGeometryUtils.js'],['utils/SkeletonUtils.js','SkeletonUtils.js']]){
+ const text=await readFile(new URL('node_modules/three/examples/jsm/'+source,root),'utf8');
+ await writeFile(new URL('frontend/assets/js/vendor/'+destination,root),text.replaceAll("from 'three'","from './three.module.js'").replaceAll("'../utils/BufferGeometryUtils.js'","'./BufferGeometryUtils.js'"));
+}
 for(const name of ['three.module.js','three.core.js']) await cp(new URL('node_modules/three/build/'+name,root),new URL('frontend/assets/js/vendor/'+name,root));
 await cp(new URL('node_modules/leaflet/dist/',root),new URL('frontend/assets/js/vendor/leaflet/',root),{recursive:true});
 for(const name of ['css','js','fonts','dh-logo.png','dh-symbol.png','dh-symbol.svg','login-mine-hd.png']) await cp(new URL('frontend/assets/'+name,root),new URL('public/assets/'+name,root),{recursive:true});
 // One graph version prevents an old cached leaf module surviving a new entry script.
 const fingerprint=createHash('sha256');
-async function fingerprintFiles(directory){for(const entry of(await readdir(directory,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))){const location=new URL(entry.name+(entry.isDirectory()?'/':''),directory);if(entry.isDirectory())await fingerprintFiles(location);else if(/\.(js|css|ejs)$/.test(entry.name)){fingerprint.update(entry.name);fingerprint.update((await readFile(location,'utf8')).replaceAll('\r\n','\n'));}}}
+async function fingerprintFiles(directory){for(const entry of(await readdir(directory,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))){const location=new URL(entry.name+(entry.isDirectory()?'/':''),directory);if(entry.isDirectory())await fingerprintFiles(location);else if(/\.(js|css|ejs|glb|woff2)$/.test(entry.name)){fingerprint.update(entry.name);fingerprint.update(/\.(glb|woff2)$/.test(entry.name)?await readFile(location):(await readFile(location,'utf8')).replaceAll('\r\n','\n'));}}}
 await fingerprintFiles(new URL('frontend/assets/',root));await fingerprintFiles(new URL('frontend/views/',root));const assetVersion=fingerprint.digest('hex').slice(0,16);
 async function versionModules(directory){for(const entry of await readdir(directory,{withFileTypes:true})){const location=new URL(entry.name+(entry.isDirectory()?'/':''),directory);if(entry.isDirectory())await versionModules(location);else if(entry.name.endsWith('.js')){const source=await readFile(location,'utf8');const versioned=versionModuleImports(source,assetVersion);if(versioned!==source)await writeFile(location,versioned);}}}
 await versionModules(new URL('public/assets/js/',root));

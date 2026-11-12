@@ -1,0 +1,16 @@
+/* The supplied TT Firs Neue Bold is the authoritative brand face.
+   Density comes from size and spacing; never synthesize unavailable weights. */
+:root{--font-ui:'TT Firs Neue',sans-serif}
+body,input,select,textarea,button,svg text{font-family:var(--font-ui);font-synthesis:none}
+body{font-size:13px;line-height:1.6}
+.brand-dh .brand-signature{gap:9px;align-items:center}
+.brand-dh .brand-signature img{width:42px;height:42px}
+.brand-dh .brand-wordmark.brand-occ-name{font-family:var(--font-ui);font-size:48px;line-height:1;letter-spacing:-.045em}
+.brand-dh .brand-caption{font-size:10px;line-height:1.5;letter-spacing:0;text-transform:none;color:var(--muted);margin-top:12px;white-space:normal}
+.brand-dh{padding-bottom:26px}
+.login-brand.brand-dh .brand-caption{color:#fff;font-size:11px}.login-brand.brand-dh .brand-wordmark.brand-occ-name{font-size:60px}
+.analytics-chart,.data-table,.speed-context,.fineprint{font-family:var(--font-ui)}
+.data-table td{line-height:1.65}
+.studio-credits{font-size:10px;color:var(--muted);margin:12px 0 24px}.studio-credits summary{cursor:pointer}.studio-credits p{max-width:90ch;line-height:1.7}
+[data-assets-loading=true] .fleet-viewport::after{content:'Memuat model 3D…';position:absolute;inset:45% 20px auto;text-align:center;font-size:13px;color:var(--muted);z-index:3}
+.plot-axis,.plot-threshold-label,.plot-series,.comparison-axis,.comparison-unit,.scene-unit-label{font-family:var(--font-ui)}

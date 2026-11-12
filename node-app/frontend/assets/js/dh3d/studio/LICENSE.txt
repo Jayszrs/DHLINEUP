@@ -1,0 +1,18 @@
+ADAPTED BLENDER STUDIO CHARACTER ASSETS
+
+Snow Rig (C) Blender Foundation | studio.blender.org
+Source: https://studio.blender.org/characters/snow/v4/
+Rain Rig (CC) Blender Foundation | studio.blender.org
+Source: https://studio.blender.org/characters/rain/v3/
+
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The Blender Studio source pages identify these rigs as CC-BY and require the
+credits above. This application adapts their mesh topology, hairstyle and eye
+geometry. Modifications: simplified 17-bone deform skeleton, web-ready glTF
+export, texture packing/resizing, turquoise/navy clothing materials, poses and
+independent workplace animation. These models are illustrative avatars and do
+not represent real photographs or assert endorsement by Blender Foundation.
+
+Original source archives are not included in the web application.
