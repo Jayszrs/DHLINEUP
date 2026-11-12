@@ -20,7 +20,7 @@ Authenticated `/occ-documentation?id=...` and `/occ-photo?id=...&index=...` reso
 
 Meetings are application records, independent of the imported spreadsheet. Store timestamps with timezone; form and display use Asia/Jakarta. Editor access, CSRF, optimistic versions and audit logs govern writes. A short transaction locking the existing bootstrap setting serializes overlap checks. No external calendar messages or invitations are sent.
 
-Six illustrated colleagues use the names, NIKs, roles and confirmed character variants provided by the user. The latest visual layout is seven desks (three front, four rear); the spreadsheet still has eight workstation asset records and fifty known physical-inventory units. Neither inventory total is rewritten to match illustrative furniture.
+Six illustrated colleagues use the names, NIKs, roles and confirmed character variants provided by the user. The latest visual layout is six desks (two front near the meeting table, four rear near the entrance); the spreadsheet still has eight workstation asset records and fifty known physical-inventory units. Neither inventory total is rewritten to match illustrative furniture.
 
 Apply `node-app/database/occ-team.sql` before deploying the team profile routes. The additive private table stores only bio, manual profile status, optional team photo path and optimistic version by the six known NIKs. User identities and roles stay canonical. A uniquely matched account can supply its existing profile picture; team uploads never overwrite account photos. `/occ-team-photo` is authenticated, and profile writes require data editor permissions plus CSRF. Local multipart and existing signed photo-upload tickets are supported. Missing portraits are labelled, never synthesized.
 
@@ -32,7 +32,7 @@ The model factory supplies unit plates from the actual selected DT code. Its sha
 
 The room date is independent of the inventory inspection date. The backend reads existing meeting records in a seven-day window for the display, while the meeting list still shows only records overlapping the selected calendar day. No meetings, attendance records, device states or inventory rows are created by simulation controls. Meeting titles and HTTPS links come from saved records. The diorama does not imply actual attendance or real device power telemetry.
 
-The front workstation row is physically nearer the videotron/conference area (three desks at z=3.2); the rear row is nearer the entrance (four desks at z=6.7). Office staff use a dedicated smooth, helmet-free model for seated and walking states, including all previews. Mine-driver PPE is unchanged. Canonical team desk IDs, actual uploaded portraits, and source asset counts are preserved.
+The front workstation row is physically nearer the videotron/conference area (two desks at z=3.2); the rear row is nearer the entrance (four desks at z=6.7). Office staff use a dedicated smooth, helmet-free model for seated and walking states, including all previews. Mine-driver PPE is unchanged. Canonical team desk IDs, actual uploaded portraits, and source asset counts are preserved.
 
 ## Dashboard date and asset revisions
 
@@ -56,4 +56,7 @@ When orienting a cloned Three.js object, set all Euler axes together (`orientCha
 
 Mouse wheel and Ctrl-wheel trackpad gestures are handled inside the 3D viewport. Main/preview render buffers are capped at 2.4/3 megapixels; previews render animated states at 30 fps and suspend when hidden or reduced motion is active. Cached geometry/materials and baked static furniture remain shared.
 
-The shared crew-character factory now supplies an original animated-feature style for both office staff and mine drivers. It keeps eye rigs outside the static head bake to support per-clone blinking, while cached buffers/materials stay shared. Office staff remain helmet-free; mine drivers retain their white safety helmet and clipboard. No real portrait, staff identity, attendance data or source record changes with this visual revision.
+The shared crew-character factory now supplies an original animated-feature style for both office staff and mine drivers. It keeps eye rigs outside the static head bake to support per-clone blinking, while cached buffers/materials stay shared. Office staff remain helmet-free; mine drivers retain white safety helmets, with a radio/crossed-arm pose for the male reference and a tablet pose for the female reference. No real portrait, staff identity, attendance data or source record changes with this visual revision.
+
+
+The 12 November 2026 revision uses the user-supplied DHLINEUP_3D_CODEX_V3 source for worker and truck geometry. Staff 1–4 occupy the four rear desks; staff 5–6 occupy the two front desks, following the red numbers on the supplied screenshot. JHO people remain helmet-free and retain real profile links, schedule motion and independent rigs. All visible DT plates use the actual validated unit, never the reference image ID. The authenticated `/3d-preview` page is a visual-only demo with an explicit example number and the unchanged approved static reference.

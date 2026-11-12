@@ -9,6 +9,7 @@
 <% if(['lineup-form','operator-form'].includes(page)) { %><script src="<%= asset('js/equipment-select.js') %>" defer></script><% } %>
 <% if(speedPage==='speed-dashboard') { %><script src="<%= asset('js/speed-dashboard.js') %>" defer></script><% } %>
 <% if(page==='speed-import') { %><script src="<%= asset('js/speed-import.js') %>" defer></script><% } %>
+<% if(page==='three-d') { %><link rel="stylesheet" href="<%= asset('css/dh-premium-3d.css') %>"><script type="module" src="<%= asset('js/dh3d/dh-premium-viewer.js') %>"></script><% } %>
 </head><body data-upload-mode="<%= storageMode %>"><a class="skip-link" href="#main-content">Lewati ke konten</a>
 <% if(user) { %><div class="app-shell"><aside class="sidebar" id="sidebar" aria-label="Navigasi utama">
 <a class="brand" href="<%= url('dashboard') %>" aria-label="Operation Command Centre, buka Dashboard"><span class="brand-signature"><img src="<%= asset('dh-symbol.svg') %>" alt="" width="48" height="48"><span class="brand-wordmark brand-occ-name">Operation<br>Command Centre</span></span><span class="brand-caption">Monitoring Operasional</span></a>

@@ -187,6 +187,8 @@ export function createApp({ db:providedDb, storage:providedStorage, mailer:provi
   app.get('/dokumentasi',(_req,res)=>res.redirect(303,url('lineup')));
   speedRoutes(app,view,url,upload);
   occRoutes(app,view,url,upload);
+  app.get('/3d-preview',async(req,res)=>view(req,res,'three-d',{label:'Pratinjau aset 3D'}));
+  app.get('/dh-3d-preview.html',(_req,res)=>res.redirect(303,url('3d-preview')));
   for(const page of pages) app.get('/'+page,async(req,res)=>{
     const filters=validation.filters(req.query),data={filters};
     if(page==='lineup') {data.rows=await req.repo.lineups(filters);data.total=Number((await one(req.db,'SELECT count(*) AS n FROM fleetsync.lineups')).n);}
