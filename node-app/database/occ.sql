@@ -19,7 +19,10 @@ CREATE TABLE IF NOT EXISTS fleetsync.occ_assets (
   version integer NOT NULL DEFAULT 1,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS occ_assets_code ON fleetsync.occ_assets(asset_code);
+ALTER TABLE fleetsync.occ_assets ALTER COLUMN asset_code TYPE text;
+ALTER TABLE fleetsync.occ_assets ADD COLUMN IF NOT EXISTS photos jsonb NOT NULL DEFAULT '[]';
+CREATE INDEX IF NOT EXISTS occ_assets_code_prefix ON fleetsync.occ_assets(left(asset_code,120));
+DROP INDEX IF EXISTS fleetsync.occ_assets_code;
 CREATE TABLE IF NOT EXISTS fleetsync.occ_checks (
   kind varchar(20) NOT NULL CHECK(kind IN ('cctv','availability')),
   work_date date NOT NULL,

@@ -6,6 +6,8 @@
 <link rel="stylesheet" href="<%= asset('css/monitoring.css') %>">
 <link rel="stylesheet" href="<%= asset('css/analytics.css') %>"><script type="module" src="<%= asset('js/analytics-charts.js') %>"></script>
 <link rel="stylesheet" href="<%= asset('css/brand-type.css') %>">
+<% if(occPage==='occ-form'||occPage==='occ-assets'){ %><link rel="stylesheet" href="<%= asset('css/occ-asset-form.css') %>"><% } %>
+<% if(occPage==='occ-form'){ %><script type="module" src="<%= asset('js/occ-asset-form.js') %>"></script><% } %>
 <% if(page==='cctv'||occPage==='occ-availability'){ %><script type="module" src="<%= asset('js/visual-controls.js') %>"></script><% } %>
 <% if(page==='cctv-form'){ %><script type="module" src="<%= asset('js/cctv-form.js') %>"></script><% } %>
 <% if(speedPage==='speed-dashboard') { %><link rel="stylesheet" href="<%= asset('js/vendor/leaflet/leaflet.css') %>"><link rel="stylesheet" href="<%= asset('css/fleet-map.css') %>"><script type="module" src="<%= asset('js/fleet-map.js') %>"></script><% } %>

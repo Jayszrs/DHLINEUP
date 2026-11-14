@@ -3,7 +3,7 @@
  <thead><tr><th scope="col">Inventory / aset</th><th scope="col">Kode setup</th><th scope="col">Qty</th><th scope="col">Brand / model</th><th scope="col">Penempatan</th><th scope="col">Kondisi</th><th scope="col">Dokumentasi</th><% if(canEditData){ %><th scope="col">Aksi</th><% } %></tr></thead>
  <tbody><% for(const item of occAssets){const photoUrl=item.photo_count?url('occ-documentation',{id:item.id}):''; %><tr id="asset-<%= item.id %>">
   <td><strong class="operator-name"><%= item.name %></strong><small><%= item.category %></small><% if(item.specifications||item.related_device||item.notes){ %><details class="occ-asset-detail"><summary>Spesifikasi &amp; catatan</summary><dl><% for(const [key,title]of [['specifications','Spesifikasi'],['related_device','Perangkat terkait'],['notes','Catatan']]){if(item[key]){ %><div><dt><%= title %></dt><dd><%= item[key] %></dd></div><% }} %></dl></details><% } %></td>
-  <td><span class="unit-label"><%= item.asset_code||'-' %></span></td>
+  <td><span class="unit-label occ-asset-codes"><%= item.asset_code||'-' %></span></td>
   <td class="occ-qty"><%= item.qty===null||item.qty===undefined?'Belum diketahui':item.qty %></td>
   <td><strong><%= item.brand||'Belum terdata' %></strong><small><%= item.model||'Belum terdata' %></small></td>
   <td><%= item.placement||'Belum terdata' %></td>

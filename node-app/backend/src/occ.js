@@ -82,7 +82,13 @@ export function occStatusSummary(statuses={},keys=Object.keys(statuses)){
  return output;
 }
 export function occFilters(input={}){const from=date(input,'from',false)||'',to=date(input,'to',false)||'';if(from&&to&&from>to)throw new HttpError(422,'Tanggal awal harus sebelum tanggal akhir.');return{work_date:date(input,'work_date',false)||'',from,to,search:text(input,'search',200),group:choice(input,'group',OCC_GROUPS,'')};}
-const assetFields={category:120,name:200,asset_code:120,brand:150,model:150,specifications:10000,related_device:300,placement:200,photo_label:200,notes:10000};
+export function occAssetCodes(value=''){
+ const codes=String(value).split(/[\r\n;,]+/).map(code=>code.trim()).filter(Boolean);
+ const unique=new Map();
+ for(const code of codes){const key=code.toLocaleUpperCase('id-ID');if(!unique.has(key))unique.set(key,code);}
+ return [...unique.values()];
+}
+const assetFields={category:120,name:200,asset_code:12000,brand:150,model:150,specifications:10000,related_device:300,placement:200,photo_label:200,notes:10000};
 export const blankOccAsset=()=>({id:'',version:0,category:'',name:'',asset_code:'',qty:'',brand:'',model:'',specifications:'',related_device:'',placement:'OCC JHO',availability:'To Check',condition:'To Check',photo_url:'',photo_label:'',notes:''});
 export class OccRepository{
  constructor(db,actor=null){this.db=db;this.actor=actor;}
@@ -113,13 +119,27 @@ export class OccRepository{
   const matchesCheck=row=>inDates(row)&&(!search||[row.work_date,row.notes,...Object.entries(row.statuses).flat()].join(' ').toLowerCase().includes(search));
   return{assets:assets.rows.filter(r=>(!filters.group||occAssetGroup(r.category)===filters.group)&&(!search||[r.name,r.category,r.asset_code,r.brand,r.model,r.placement].join(' ').toLowerCase().includes(search))),allAssets:assets.rows,cctv:cctv.filter(matchesCheck),availability:availability.filter(matchesCheck),selectedCctv,selectedInventory,summary};
  }
- async saveAsset(input){
+ async saveAsset(input,{savePhotos}={}){
   const id=text(input,'id',80),version=Number(text(input,'version',12)||0);if(!Number.isSafeInteger(version)||version<0||version>2147483647)throw new HttpError(422,'Versi inventory tidak valid.');
   const row={};for(const [key,max]of Object.entries(assetFields))row[key]=text(input,key,max,['category','name'].includes(key));
+  const codes=occAssetCodes(row.asset_code);
+  if(codes.some(code=>[...code].length>120))throw new HttpError(422,'Setiap kode aset maksimal 120 karakter. Pisahkan kode dengan baris baru.');
+  row.asset_code=codes.join('\n');
   const rawQty=text(input,'qty',9);if(rawQty&&!/^\d+$/.test(rawQty))throw new HttpError(422,'Jumlah unit harus bilangan bulat positif atau kosong jika belum diketahui.');row.qty=rawQty?Number(rawQty):null;
   row.availability=choice(input,'availability',OCC_ASSET_AVAILABILITY,'To Check');row.condition=choice(input,'condition',OCC_CONDITIONS,'To Check');row.photo_url=occPhotoUrl(text(input,'photo_url',2048));
   const savedId=id||'occ-'+randomBytes(16).toString('hex');
-  await this.db.transaction(async tx=>{const keys=Object.keys(row),values=keys.map(k=>row[k]);let saved;if(id){if(version<1)throw stale();saved=await tx.query(`UPDATE fleetsync.occ_assets SET ${keys.map((k,i)=>`${k}=$${i+1}`).join(',')},version=version+1,updated_at=now() WHERE id=$${keys.length+1} AND version=$${keys.length+2} RETURNING id`,[...values,id,version]);}else{if(version!==0)throw stale();saved=await tx.query(`INSERT INTO fleetsync.occ_assets(id,${keys.join(',')}) VALUES($1,${keys.map((_,i)=>'$'+(i+2)).join(',')}) RETURNING id`,[savedId,...values]);}if(!saved.rows.length)throw stale();await audit(tx,this.actor,id?'update':'create','occ-asset',savedId,row);});return savedId;
+  await this.db.transaction(async tx=>{
+   const previous=id?await one(tx,'SELECT * FROM fleetsync.occ_assets WHERE id=$1 FOR UPDATE',[id]):null;
+   if(id?(!previous||version!==previous.version):version!==0)throw stale();
+   if(savePhotos)row.photos=JSON.stringify(await savePhotos(tx,previous?.photos||[]));
+   const keys=Object.keys(row),values=keys.map(key=>row[key]);
+   if(id){
+    await tx.query(`UPDATE fleetsync.occ_assets SET ${keys.map((key,index)=>`${key}=$${index+1}`).join(',')},version=version+1,updated_at=now() WHERE id=$${keys.length+1}`,[...values,id]);
+   }else{
+    await tx.query(`INSERT INTO fleetsync.occ_assets(id,${keys.join(',')}) VALUES($1,${keys.map((_,index)=>'$'+(index+2)).join(',')})`,[savedId,...values]);
+   }
+   await audit(tx,this.actor,id?'update':'create','occ-asset',savedId,row);
+  });return savedId;
  }
  async saveCheck(kind,input){
   if(!['cctv','availability'].includes(kind))throw new HttpError(422,'Jenis pengecekan tidak valid.');const work_date=date(input,'work_date'),version=Number(text(input,'version',12)||0);if(!Number.isSafeInteger(version)||version<0||version>2147483647)throw new HttpError(422,'Versi pengecekan tidak valid.');

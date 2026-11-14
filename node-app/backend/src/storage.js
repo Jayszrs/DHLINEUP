@@ -32,7 +32,7 @@ export class Storage {
   }
   async issue(db,user,input) {
     if(!this.client) throw new HttpError(400,'Unggah lokal melalui formulir.');
-    const kind=choice(input,'kind',['proof_ftw','proof_mine','spreadsheet','profile_photo','cctv_media']), extension=text(input,'extension',8).toLowerCase(),size=Number(input.size);
+    const kind=choice(input,'kind',['proof_ftw','proof_mine','spreadsheet','profile_photo','cctv_media','occ_photo']), extension=text(input,'extension',8).toLowerCase(),size=Number(input.size);
     if(!Number.isSafeInteger(size)||size<=0||size>(kind==='spreadsheet'?10:kind==='profile_photo'?2:kind==='cctv_media'&&['mp4','webm'].includes(extension)?20:5)*1024*1024) throw new HttpError(422,'Ukuran unggahan melebihi batas.');
     if(!(kind==='spreadsheet'?['xlsx','csv']:kind==='cctv_media'?['png','jpg','jpeg','webp','mp4','webm']:['png','jpg','jpeg','webp']).includes(extension)) throw new HttpError(422,'Format unggahan tidak didukung.');
     const pending=await one(db,'SELECT count(*) AS n FROM fleetsync.upload_tickets WHERE user_id=$1 AND consumed_at IS NULL AND expires_at>now()',[user.id]);

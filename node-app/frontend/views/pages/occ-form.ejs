@@ -15,7 +15,7 @@
  <% if(!assetForm){ %>
  <form class="occ-date-jump speed-filters" method="get" action="<%= url('occ-form') %>"><input type="hidden" name="kind" value="<%= occKind %>"><label>Pilih tanggal pengecekan<input type="date" name="work_date" min="1900-01-01" value="<%= row.work_date %>" required></label><button class="subtle-button" type="submit">Buka tanggal</button><span class="muted">Catatan tersimpan dimuat sesuai tanggal, termasuk yang belum diperiksa.</span></form>
  <% } %>
- <form class="editor-form occ-editor-form" method="post" action="<%= url('occ-save') %>" data-saving aria-describedby="occ-form-note">
+ <form class="editor-form occ-editor-form" method="post" action="<%= url('occ-save') %>" enctype="multipart/form-data" <%- assetForm?'data-occ-asset-form':'data-saving' %> aria-describedby="occ-form-note">
   <input type="hidden" name="csrf" value="<%= csrf %>"><input type="hidden" name="kind" value="<%= occKind %>"><input type="hidden" name="version" value="<%= row.version||0 %>">
   <p class="form-intro" id="occ-form-note"><%= assetForm?'Kolom bertanda * wajib diisi. Kosongkan jumlah jika belum diketahui.':'Tanggal pengecekan: '+dateLabel+'. Pilih Not Checked untuk perangkat yang belum diperiksa; status ini tidak dihitung sebagai OK.' %></p>
   <% if(assetForm){ %>
@@ -23,7 +23,7 @@
   <fieldset class="form-card"><legend>Identitas perangkat</legend><div class="form-grid occ-form-grid">
    <label class="full-span">Nama inventory / aset *<input name="name" required maxlength="200" value="<%= row.name||'' %>" autocomplete="off"></label>
    <label>Kategori *<input name="category" required maxlength="120" value="<%= row.category||'' %>" list="occ-category-options" autocomplete="off"><datalist id="occ-category-options"><% for(const category of [...new Set(occAssets.map(r=>r.category).filter(Boolean))]){ %><option value="<%= category %>"></option><% } %></datalist></label>
-   <label>Kode aset / setup<input name="asset_code" maxlength="120" value="<%= row.asset_code||'' %>" autocomplete="off"><small>Satu kode setup dapat dipakai bersama oleh PC dan monitornya.</small></label>
+   <label>Kode aset / setup<textarea name="asset_code" rows="3" maxlength="12000" placeholder="CC-OPT1&#10;CC-OPT2&#10;CC-OPT3" aria-describedby="occ-code-help"><%= row.asset_code||'' %></textarea><small id="occ-code-help">Isi satu kode per baris. Bisa juga dipisahkan dengan koma. Maksimal 120 karakter per kode.</small><small data-occ-code-count role="status"></small></label>
    <label>Jumlah unit<input type="number" name="qty" min="0" max="999999999" step="1" inputmode="numeric" value="<%= row.qty??'' %>" placeholder="Belum diketahui"><small>Kosong berarti belum diketahui, bukan nol.</small></label>
    <label>Penempatan / site<input name="placement" maxlength="200" value="<%= row.placement||'' %>" autocomplete="off"></label>
    <label>Brand / manufacturer<input name="brand" maxlength="150" value="<%= row.brand||'' %>" autocomplete="off"></label>
@@ -36,7 +36,21 @@
   </div></fieldset>
   <fieldset class="form-card"><legend>Spesifikasi dan dokumentasi</legend><div class="form-grid occ-form-grid">
    <label class="full-span">Spesifikasi<textarea name="specifications" rows="4" maxlength="10000"><%= row.specifications||'' %></textarea></label>
-   <label class="full-span">Tautan foto / dokumentasi<input type="url" name="photo_url" maxlength="2048" value="<%= row.photo_url||'' %>" placeholder="https://" autocomplete="off"><small>Gunakan URL HTTP atau HTTPS. Tautan asli pada spreadsheet dipertahankan.</small></label>
+   <div class="full-span occ-asset-photos">
+    <label for="occ-photo-files">Unggah foto dokumentasi</label>
+    <input id="occ-photo-files" type="file" name="occ_photo" multiple accept="image/png,image/jpeg,image/webp" aria-describedby="occ-photo-help" data-occ-photo-files>
+    <small id="occ-photo-help">Pilih beberapa foto sekaligus atau tambahkan lewat pilihan berikutnya. JPG, PNG, WebP, maksimal 5 MB per foto dan 20 foto baru sekali simpan.</small>
+    <input type="hidden" name="photo_tickets" value="<%= JSON.stringify(photoTickets) %>">
+    <input type="hidden" name="remove_photos" value="[]">
+    <div class="occ-upload-previews" data-occ-photo-previews></div>
+    <p class="fineprint" role="status" data-occ-photo-status>Foto disimpan bersama inventory.</p>
+    <p class="alert error" role="alert" data-occ-photo-error hidden></p>
+    <% if(occPictures.length){ %>
+    <p class="occ-stored-photo-title">Foto tersimpan · <%= occPictures.length %></p>
+    <div class="occ-upload-previews"><% for(const [index,photo]of occPictures.entries()){ %><figure class="occ-upload-photo"><a href="<%= url('occ-photo',{id:row.id,index}) %>" data-lightbox><img src="<%= url('occ-photo',{id:row.id,index}) %>" alt="<%= photo.name %>" width="240" height="180" loading="lazy"></a><figcaption><span><%= photo.name %></span><% if(photo.id){ %><label class="checkbox-label"><input type="checkbox" value="<%= photo.id %>" data-occ-remove-photo>Hapus saat disimpan</label><% }else{ %><small>Dokumentasi sumber</small><% } %></figcaption></figure><% } %></div>
+    <% } %>
+   </div>
+   <label class="full-span">Tautan dokumentasi tambahan<input type="url" name="photo_url" maxlength="2048" value="<%= row.photo_url||'' %>" placeholder="https://" autocomplete="off"><small>Opsional. Foto bisa langsung diunggah melalui pilihan di atas.</small></label>
    <label class="full-span">Label dokumentasi<input name="photo_label" maxlength="200" value="<%= row.photo_label||'' %>" autocomplete="off"></label>
    <label class="full-span">Catatan<textarea name="notes" rows="3" maxlength="10000"><%= row.notes||'' %></textarea></label>
   </div></fieldset>

@@ -2,8 +2,9 @@ import {OccRepository,occFilters,blankOccAsset,OCC_ITEMS,OCC_CCTV_SITES,OCC_STAT
 import {canEditData} from './auth.js';
 import {HttpError,choice,text,date,recordId} from './validation.js';
 import {OccMeetings,meetingLocal,meetingTime} from './occ-meetings.js';
-import {occPhotos,driveReference} from './occ-photos.js';
-import {one} from './db.js';
+import {occPhotos,occPhotoManifest} from './occ-photos.js';
+import {randomBytes} from 'node:crypto';
+import multer from 'multer';
 import {reportWorkbook} from './report-workbook.js';
 import {CctvRepository,cctvFilters,cctvPercent,CCTV_SITES,CCTV_SOURCE_URL} from './cctv.js';
 import {OccTeam,TEAM_STATUSES} from './occ-team.js';
@@ -14,6 +15,15 @@ const requireEditor=req=>{if(!canEditData(req.user))throw new HttpError(403,'Aku
 const currentDay=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
 const formKind=input=>choice(input,'kind',['asset','cctv','availability'],'asset');
 const formLabel=kind=>kind==='asset'?'Form Inventory OCC':kind==='cctv'?'Pengecekan CCTV':'Pengecekan Inventory';
+const assetUpload=multer({storage:multer.memoryStorage(),limits:{fileSize:5*1024*1024,files:20,fields:40,fieldSize:30000}}).fields([{name:'occ_photo',maxCount:20}]);
+function photoSelection(input){
+ let tickets,removed;
+ try{tickets=JSON.parse(text(input,'photo_tickets',12000)||'[]');removed=JSON.parse(text(input,'remove_photos',4000)||'[]');}
+ catch{throw new HttpError(422,'Pilihan foto tidak valid. Pilih ulang foto.');}
+ if(!Array.isArray(tickets)||tickets.length>20||tickets.some(ticket=>!ticket||!(/^[a-f0-9]{64}$/).test(ticket.id)||typeof ticket.name!=='string'||ticket.name.length>200)||new Set(tickets.map(ticket=>ticket.id)).size!==tickets.length)throw new HttpError(422,'Referensi foto tidak valid. Pilih ulang foto.');
+ if(!Array.isArray(removed)||removed.some(id=>typeof id!=='string'||!(/^[a-f0-9]{24}$/).test(id)))throw new HttpError(422,'Pilihan foto yang dihapus tidak valid.');
+ return{tickets,removed};
+}
 export function occRoutes(app,view,url,upload){
  app.get('/occ-team-photo',async(req,res)=>{const person=await new OccTeam(req.db,req.user.id).get(text(req.query,'nik',60,true));if(!person.photo_path)throw new HttpError(404,'Foto profil belum diunggah.');const photo=person.photo_path;res.type(photo.endsWith('.webp')?'image/webp':photo.endsWith('.png')?'image/png':'image/jpeg').send(await req.storage.get(photo));});
  app.get('/occ-team-form',async(req,res)=>{requireEditor(req);const row=await new OccTeam(req.db,req.user.id).get(text(req.query,'nik',60,true));return view(req,res,'occ-team-form',{label:'Profil tim OCC',occPage:'occ-dashboard',row,teamStatuses:TEAM_STATUSES});});
@@ -21,7 +31,7 @@ export function occRoutes(app,view,url,upload){
   req.auth.csrf(req);let newPhoto='',temporary='';const repo=new OccTeam(req.db,req.user.id);try{let file=req.files?.profile_photo?.[0];if(req.body.profile_photo_ticket){const item=await req.db.transaction(tx=>req.storage.consume(tx,req.user,text(req.body,'profile_photo_ticket',64,true),'profile_photo'));temporary=item.temporaryPath;file={buffer:item.bytes};}let photo;if(file){photo=await req.storage.image(file.buffer,{avatar:true});newPhoto=photo;}else if(text(req.body,'remove_profile_photo',1)==='1')photo='';const nik=await repo.save(req.body,photo);newPhoto='';await req.auth.flash(req,'Profil tim OCC berhasil disimpan.');res.redirect(303,url('occ-dashboard')+'#occ-team');}catch(error){if(newPhoto)await req.storage.remove(newPhoto);if(!error.status)throw error;const row=await repo.get(text(req.body,'nik',60,true));res.status(error.status);return view(req,res,'occ-team-form',{label:'Periksa profil tim',occPage:'occ-dashboard',row:{...row,bio:text(req.body,'bio',2000),work_status:text(req.body,'work_status',80)},teamStatuses:TEAM_STATUSES,errorMessage:error.message});}finally{if(temporary)await req.storage.remove(temporary).catch(()=>{});}
  });
  app.get('/occ-documentation',async(req,res)=>{const asset=await new OccRepository(req.db,req.user.id).asset(text(req.query,'id',80,true));return view(req,res,'occ-documentation',{...defaults,label:'Dokumentasi OCC',occPage:'occ-assets',occAsset:asset,occPictures:await occPhotos(req.db,asset)});});
- app.get('/occ-photo',async(req,res)=>{const asset=await new OccRepository(req.db,req.user.id).asset(text(req.query,'id',80,true)),pictures=await occPhotos(req.db,asset),index=Number(text(req.query,'index',4)||0);if(!Number.isSafeInteger(index)||index<0||!pictures[index])throw new HttpError(404,'Foto dokumentasi belum tersedia.');res.type('image/webp').send(await req.storage.get(pictures[index].path));});
+ app.get('/occ-photo',async(req,res)=>{const asset=await new OccRepository(req.db,req.user.id).asset(text(req.query,'id',80,true)),pictures=await occPhotos(req.db,asset),index=Number(text(req.query,'index',4)||0);if(!Number.isSafeInteger(index)||index<0||!pictures[index])throw new HttpError(404,'Foto dokumentasi belum tersedia.');const photo=pictures[index];res.type(photo.mime||'image/webp').send(await req.storage.get(photo.path));});
  app.get('/occ-meeting-form',async(req,res)=>{requireEditor(req);const id=recordId(req.query),repo=new OccMeetings(req.db,req.user.id);const row=id?await repo.get(id):{start_at:'',end_at:'',version:0};return view(req,res,'occ-meeting',{label:id?'Edit meeting OCC':'Jadwalkan meeting OCC',occPage:'occ-dashboard',row:{...row,start_at:meetingLocal(row.start_at),end_at:meetingLocal(row.end_at)}});});
  app.post('/occ-meeting-save',async(req,res)=>{requireEditor(req);req.auth.csrf(req);try{const day=await new OccMeetings(req.db,req.user.id).save(req.body);await req.auth.flash(req,'Jadwal meeting OCC berhasil disimpan.');return res.redirect(303,url('occ-dashboard',{meeting_date:day}));}catch(error){if(!error.status)throw error;res.status(error.status);return view(req,res,'occ-meeting',{label:'Periksa jadwal meeting',occPage:'occ-dashboard',row:Object.fromEntries(['id','version','title','start_at','end_at','meeting_url','notes'].map(k=>[k,typeof req.body[k]==='string'?req.body[k]:''])),errorMessage:error.message});}});
  app.post('/occ-meeting-delete',async(req,res)=>{requireEditor(req);req.auth.csrf(req);const day=await new OccMeetings(req.db,req.user.id).remove(req.body);await req.auth.flash(req,'Jadwal meeting OCC berhasil dihapus.');res.redirect(303,url('occ-dashboard',{meeting_date:day}));});
@@ -31,26 +41,54 @@ export function occRoutes(app,view,url,upload){
   const cctvData=['occ-dashboard','occ-availability'].includes(page)?await new CctvRepository(req.db).data(cctvFilters({to:filters.work_date||currentDay()})):null;
   const team=page==='occ-dashboard'?await new OccTeam(req.db,req.user.id).all():[];
   const meetingDay=date(req.query,'meeting_date',false)||currentDay(),sceneMeetings=page==='occ-dashboard'?await new OccMeetings(req.db,req.user.id).listWindow(meetingDay):[],start=new Date(meetingDay+'T00:00:00+07:00').valueOf(),end=start+86400000,meetings=sceneMeetings.filter(m=>new Date(m.start_at).valueOf()<end&&new Date(m.end_at).valueOf()>start);
-  const photoSetting=await one(req.db,"SELECT setting_value FROM fleetsync.app_settings WHERE setting_key='occ_photos_v1'");let manifest={};try{manifest=JSON.parse(photoSetting?.setting_value||'{}');}catch{}
-  for(const asset of data.assets)asset.photo_count=manifest[driveReference(asset.photo_url)]?.length||0;
+  const manifest=await occPhotoManifest(req.db);
+  for(const asset of data.assets)asset.photo_count=(await occPhotos(req.db,asset,manifest)).length;
   return view(req,res,'occ',{...defaults,cctvData,cctvPercent,CCTV_SITES,cctvSourceUrl:CCTV_SOURCE_URL,label:labels[page],occPage:page,occFilters:filters,occAssets:data.assets,occAllAssets:data.allAssets,occCctv:data.cctv,occAvailability:data.availability,occSelectedCctv:data.selectedCctv,occSelectedInventory:data.selectedInventory,occSummary:data.summary,meetings,sceneMeetings,meetingDay,meetingTime,occTeam:team.map(({photo_path,own_photo,...person})=>({...person,photo:photo_path?url('occ-team-photo',{nik:person.nik,v:person.version}):'',href:canEditData(req.user)?url('occ-team-form',{nik:person.nik}):''}))});
  });
  app.get('/occ-form',async(req,res)=>{
   requireEditor(req);const repo=new OccRepository(req.db,req.user.id),kind=formKind(req.query);let row;
   if(kind==='asset'){const id=text(req.query,'id',80);row=id?await repo.asset(id):blankOccAsset();}
   else{const day=date(req.query,'work_date',false)||currentDay();row=await repo.check(kind,day)||{work_date:day,version:0,notes:'',statuses:Object.fromEntries((kind==='cctv'?OCC_CCTV_SITES:OCC_ITEMS).map(key=>[key,'Not Checked']))};}
-  return view(req,res,'occ-form',{...defaults,label:formLabel(kind),occPage:'occ-form',occKind:kind,row,occAssets:(await repo.data()).allAssets});
+  return view(req,res,'occ-form',{...defaults,label:formLabel(kind),occPage:'occ-form',occKind:kind,row,occAssets:(await repo.data()).allAssets,occPictures:kind==='asset'?await occPhotos(req.db,row):[],photoTickets:[]});
  });
- app.post('/occ-save',async(req,res)=>{
+ app.post('/occ-save',(req,_res,next)=>{requireEditor(req);next();},assetUpload,async(req,res)=>{
   requireEditor(req);req.auth.csrf(req);const kind=formKind(req.body),repo=new OccRepository(req.db,req.user.id);
+  const created=[],temporary=[],deleted=[];
+  let committed=false;
   try{
-   if(kind==='asset'){await repo.saveAsset(req.body);await req.auth.flash(req,'Inventory OCC berhasil disimpan.');return res.redirect(303,url('occ-assets'));}
+   if(kind==='asset'){
+    const selection=photoSelection(req.body),files=req.files?.occ_photo||[];
+    if(files.length+selection.tickets.length>20)throw new HttpError(422,'Maksimal 20 foto baru sekali simpan. Tambahkan foto berikutnya melalui Edit.');
+    await repo.saveAsset(req.body,{savePhotos:async(tx,previous)=>{
+     if(selection.removed.some(id=>!previous.some(photo=>photo.id===id)))throw new HttpError(422,'Foto yang akan dihapus tidak ditemukan pada aset ini.');
+     const pictures=previous.filter(photo=>!selection.removed.includes(photo.id));
+     deleted.push(...previous.filter(photo=>selection.removed.includes(photo.id)).map(photo=>photo.path));
+     for(const ticket of selection.tickets){
+      const item=await req.storage.consume(tx,req.user,ticket.id,'occ_photo');
+      temporary.push(item.temporaryPath);
+      files.push({buffer:item.bytes,originalname:ticket.name});
+     }
+     for(const file of files){
+      const path=await req.storage.image(file.buffer);
+      created.push(path);
+      const mime=path.endsWith('.webp')?'image/webp':path.endsWith('.png')?'image/png':'image/jpeg';
+      pictures.push({id:randomBytes(12).toString('hex'),path,mime,name:String(file.originalname||'Foto OCC').slice(0,200)});
+     }
+     return pictures;
+    }});
+    committed=true;
+    await Promise.allSettled([...temporary,...deleted].map(path=>req.storage.remove(path)));
+    await req.auth.flash(req,'Inventory OCC dan foto dokumentasi berhasil disimpan.');return res.redirect(303,url('occ-assets'));
+   }
    const day=await repo.saveCheck(kind,req.body);await req.auth.flash(req,'Pengecekan OCC berhasil disimpan.');return res.redirect(303,url(kind==='cctv'?'occ-cctv':'occ-availability',{work_date:day}));
   }catch(error){
+   if(!committed)await Promise.allSettled(created.map(path=>req.storage.remove(path)));
    if(!error.status)throw error;res.status(error.status);
    const safe=Object.fromEntries(Object.entries(req.body).filter(([,v])=>typeof v==='string'||typeof v==='number'));
    const row=kind==='asset'?{...blankOccAsset(),...safe}:{...safe,statuses:Object.fromEntries((kind==='cctv'?OCC_CCTV_SITES:OCC_ITEMS).map((key,index)=>[key,safe['status_'+index]||'Not Checked']))};
-   return view(req,res,'occ-form',{...defaults,label:formLabel(kind),occPage:'occ-form',occKind:kind,row,occAssets:(await repo.data()).allAssets,errorMessage:error.message});
+   const current=kind==='asset'&&row.id?await repo.asset(row.id).catch(()=>null):null;
+   let photoTickets=[];try{photoTickets=photoSelection(req.body).tickets;}catch{}
+   return view(req,res,'occ-form',{...defaults,label:formLabel(kind),occPage:'occ-form',occKind:kind,row,occAssets:(await repo.data()).allAssets,occPictures:current?await occPhotos(req.db,current):[],photoTickets,errorMessage:error.message+(req.files?.occ_photo?.length?' Foto baru belum tersimpan. Pilih ulang foto sebelum mencoba lagi.':'')});
   }
  });
 }
