@@ -13,7 +13,7 @@
 <section class="editor-page occ-editor-page">
  <div class="page-title"><div><h1><%= label %></h1><p><%= assetForm?'Identitas, kondisi, dan dokumentasi perangkat OCC Jakarta Head Office.':'Catat hasil pengecekan setiap perangkat sesuai kondisi pada tanggal pilihan.' %></p></div><a class="subtle-button" href="<%= url(destination) %>">Kembali ke <%= assetForm?'inventory':'rekap' %></a></div>
  <% if(!assetForm){ %>
- <form class="occ-date-jump speed-filters" method="get" action="<%= url('occ-form') %>"><input type="hidden" name="kind" value="<%= occKind %>"><label>Pilih tanggal pengecekan<input type="date" name="work_date" min="1900-01-01" value="<%= row.work_date %>" required></label><button class="subtle-button" type="submit">Buka tanggal</button><span class="muted">Catatan tersimpan dimuat sesuai tanggal, termasuk yang belum diperiksa.</span></form>
+ <form data-auto-filter class="occ-date-jump speed-filters" method="get" action="<%= url('occ-form') %>"><input type="hidden" name="kind" value="<%= occKind %>"><label>Pilih tanggal pengecekan<input type="date" name="work_date" min="1900-01-01" value="<%= row.work_date %>" required></label><button class="subtle-button" type="submit" data-filter-apply>Buka tanggal</button><span class="muted">Catatan tersimpan dimuat sesuai tanggal, termasuk yang belum diperiksa.</span></form>
  <% } %>
  <form class="editor-form occ-editor-form" method="post" action="<%= url('occ-save') %>" enctype="multipart/form-data" <%- assetForm?'data-occ-asset-form':'data-saving' %> aria-describedby="occ-form-note">
   <input type="hidden" name="csrf" value="<%= csrf %>"><input type="hidden" name="kind" value="<%= occKind %>"><input type="hidden" name="version" value="<%= row.version||0 %>">

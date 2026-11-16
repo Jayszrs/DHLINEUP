@@ -5,6 +5,7 @@
   font-style:normal;
   font-display:swap
 }
+form[data-auto-filter] [data-filter-apply][hidden]{display:none}
 .equipment-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
 .speed-import-table{min-width:900px;font-variant-numeric:tabular-nums}
 .speed-import-table th,.speed-import-table td{white-space:nowrap}

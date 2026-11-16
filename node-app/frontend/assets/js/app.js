@@ -1,21 +1,64 @@
 'use strict';
 
-const autoFilters=document.querySelector('form[data-auto-filter]');
-if(autoFilters) {
-  let filterTimer;
-  const announce=document.createElement('span');announce.className='sr-only';announce.setAttribute('role','status');autoFilters.append(announce);
-  for(const input of autoFilters.querySelectorAll('select[name="site"],input[name="work_date"],select[name="shift"],select[name="type_category"]')) {
-    input.addEventListener('change',()=>{
-      clearTimeout(filterTimer);
-      filterTimer=setTimeout(()=>{if(autoFilters.checkValidity()) autoFilters.requestSubmit(autoFilters.querySelector('.show-button'));},180);
-    });
+let filterTimer;
+const filterForms = document.querySelectorAll('form[data-auto-filter]');
+for (const form of filterForms) {
+  if (form.method.toLowerCase() !== 'get') continue;
+  const announce = document.createElement('span');
+  announce.className = 'sr-only';
+  announce.setAttribute('role', 'status');
+  form.append(announce);
+  for (const button of form.querySelectorAll('[data-filter-apply]')) button.hidden = true;
+  form.dataset.autoFilterReady = 'true';
+
+  function updatePeriod(changed) {
+    const from = form.querySelector('input[name="from"]');
+    const to = form.querySelector('input[name="to"]');
+    if (!from || !to) return;
+    if (from.value && to.value && from.value > to.value) {
+      if (changed === from) to.value = from.value;
+      if (changed === to) from.value = to.value;
+    }
+    const scene = form.querySelector('input[type="hidden"][name="scene_date"]');
+    if (scene?.value && ((from.value && scene.value < from.value) || (to.value && scene.value > to.value))) scene.value = '';
   }
-  autoFilters.addEventListener('submit',event=>{
+
+  function schedule(changed, delay) {
     clearTimeout(filterTimer);
-    if(autoFilters.dataset.filterSubmitting==='true') {event.preventDefault();return;}
-    autoFilters.dataset.filterSubmitting='true';autoFilters.setAttribute('aria-busy','true');announce.textContent='Memuat hasil filter...';
+    updatePeriod(changed);
+    filterTimer = setTimeout(() => {
+      if (form.checkValidity()) form.requestSubmit();
+    }, delay);
+  }
+
+  for (const input of form.querySelectorAll('input[type="date"], input[type="month"], select[name]')) {
+    if (input.type === 'date' && !input.min) input.min = '1900-01-01';
+    input.addEventListener('change', () => schedule(input, 200));
+  }
+  for (const search of form.querySelectorAll('input[type="search"], input[name="search"]')) {
+    search.addEventListener('input', () => schedule(search, 400));
+  }
+  form.addEventListener('submit', event => {
+    clearTimeout(filterTimer);
+    updatePeriod(document.activeElement);
+    if (form.dataset.filterSubmitting === 'true') {
+      event.preventDefault();
+      return;
+    }
+    if (!form.checkValidity()) {
+      event.preventDefault();
+      return;
+    }
+    form.dataset.filterSubmitting = 'true';
+    form.setAttribute('aria-busy', 'true');
+    announce.textContent = 'Memuat data sesuai filter…';
   });
-  window.addEventListener('pageshow',()=>{autoFilters.dataset.filterSubmitting='false';autoFilters.removeAttribute('aria-busy');announce.textContent='';});
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) clearTimeout(filterTimer);
+    form.dataset.filterSubmitting = 'false';
+    form.removeAttribute('aria-busy');
+    announce.textContent = '';
+  });
 }
 
 const retryNotice = document.querySelector('[data-retry-after]');
