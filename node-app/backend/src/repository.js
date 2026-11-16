@@ -10,7 +10,8 @@ export class Repository {
     const terms = [], values = [];
     for (const key of ['site','work_date','shift','type_category']) if (filters[key] && filters[key] !== 'All') { values.push(filters[key]); terms.push(`${key}=$${values.length}`); }
     if (filters.search) { values.push(`%${filters.search}%`); terms.push(`concat_ws(' ',unit,equipment,equipment_kind,operator_name,nik,note,work_date::text) ILIKE $${values.length}`); }
-    return (await this.db.query(`SELECT * FROM fleetsync.lineups ${terms.length ? 'WHERE '+terms.join(' AND ') : ''} ORDER BY work_date,unit,id`, values)).rows;
+    const dateDirection=filters.date_order==='newest'?'DESC':'ASC';
+    return (await this.db.query(`SELECT * FROM fleetsync.lineups ${terms.length ? 'WHERE '+terms.join(' AND ') : ''} ORDER BY work_date ${dateDirection},unit,id`, values)).rows;
   }
   async lineup(id) { return await one(this.db, 'SELECT * FROM fleetsync.lineups WHERE id=$1', [id]) || Promise.reject(new HttpError(404, 'Data Line Up tidak ditemukan.')); }
   async operators(filters = {}) { return (await this.db.query("SELECT * FROM fleetsync.operators WHERE site=$1 AND concat_ws(' ',name,nik,unit,equipment,equipment_kind) ILIKE $2 ORDER BY name,id", [filters.site || 'BCP', `%${filters.search || ''}%`])).rows; }

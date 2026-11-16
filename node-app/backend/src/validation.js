@@ -23,7 +23,7 @@ export function date(input, key, required = true) {
   return value;
 }
 export function filters(input) {
-  return { site: choice(input, 'site', SITES, 'BCP'), work_date: date(input, 'work_date', false) || '', shift: choice(input, 'shift', ['All', ...SHIFTS], 'All'), type_category: choice(input, 'type_category', ['All', ...CATEGORIES], 'All'), search: text(input, 'search', 200) };
+  return { site: choice(input, 'site', SITES, 'BCP'), work_date: date(input, 'work_date', false) || '', shift: choice(input, 'shift', ['All', ...SHIFTS], 'All'), type_category: choice(input, 'type_category', ['All', ...CATEGORIES], 'All'), search: text(input, 'search', 200), date_order: choice(input, 'date_order', ['oldest','newest'], 'oldest') };
 }
 export function lineup(input) {
   const row = { site: choice(input, 'site', SITES), work_date: date(input, 'work_date'), shift: choice(input, 'shift', SHIFTS, SHIFTS[0]), type_category: choice(input, 'type_category', CATEGORIES, CATEGORIES[0]) };
