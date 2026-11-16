@@ -1,5 +1,31 @@
 import test from'node:test';import assert from'node:assert/strict';import request from'supertest';import{mkdtemp,rm}from'node:fs/promises';import os from'node:os';import path from'node:path';import sharp from'sharp';import{unzipSync,strFromU8}from'fflate';import{database,initialize}from'../backend/src/db.js';import{createApp}from'../backend/src/app.js';import{Storage}from'../backend/src/storage.js';import{CctvRepository,parseCctvSource,validateCctv,cameraMetrics,cameraNames,availabilityTone,CCTV_SOURCE_ID}from'../backend/src/cctv.js';
 function source(){const header=['','ACP','','','','','','KCP','','','','','','BCP','','','','','','BPP','','','','','','HO','','','','','SSCP'],columns=['Date','Total','DOWN','ON','Availability','Remarks','','Total','DOWN','ON','Availability','Remarks','','Total','DOWN','ON','Availability','Remarks','','Total','DOWN','ON','Availability','Remarks','','Total','DOWN','ON','Availability','Remarks','Total','DOWN','ON','Availability','Remarks'],make=(formatted=false)=>{const row=['31 Jul 2026'];for(const col of[1,7,13,19,25,30]){row[col]=8;row[col+1]=0;row[col+2]=8;row[col+3]=formatted?'100%':1;row[col+4]='';}row[19]=8;row[20]=0;row[21]=8;row[22]=formatted?'100%':1;row[1]=8;row[2]=0;row[3]=8;row[4]=formatted?'100%':1;row[5]='ACP-CCTV-01\nACP-CCTV-02';return row;};return{spreadsheetId:CCTV_SOURCE_ID,values:[header,columns,make(true)],raw_values:[header,columns,make(false)]};}
+test('CCTV date changes load the selected report and directly save a new date without a separate open step',async()=>{
+ const db=await database({url:'',dataDir:null});await initialize(db);
+ const app=createApp({db}),admin=request.agent(app),password='CCTV-Date-QA-2026';
+ try{
+  const setup=await admin.get('/setup');
+  await admin.post('/setup').type('form').send({csrf:csrf(setup),name:'Date QA',username:'cctv.date.qa',password,password_confirmation:password});
+  const repo=new CctvRepository(db);
+  await repo.importSource(source(),{to:'2026-11-12'});
+  const form=await admin.get('/cctv-report-form?site=HO&work_date=2026-07-31');
+  assert.equal(form.status,200);
+  assert.doesNotMatch(form.text,/data-cctv-load|Buka site \/ tanggal ini/);
+  const token=csrf(form);
+  const blank=await admin.get('/cctv-report-data?site=HO&work_date=2026-11-10');
+  assert.equal(blank.status,200);assert.equal(blank.body.row.version,0);assert.equal(blank.body.row.total_count,8);
+  const saved=await admin.post('/cctv-report-save').type('form').send({csrf:token,site:'HO',work_date:'2026-11-10',original_site:'HO',original_work_date:'2026-07-31',version:'1',total_count:'8',camera_names:'HO-01\nHO-02',remarks:'Direct date input',incident_details:JSON.stringify([{key:'ho01',duration_minutes:45}])});
+  assert.equal(saved.status,303,saved.text);
+  const selected=await admin.get('/cctv-report-data?site=HO&work_date=2026-11-10');
+  assert.equal(selected.body.row.version,1);assert.equal(selected.body.row.incidents.length,2);assert.equal(selected.body.row.down_count,2);assert.equal(selected.body.row.availability_percent,75);assert.equal(selected.body.row.incidents[0].duration_minutes,45);
+  const conflict=await admin.post('/cctv-report-save').type('form').send({csrf:token,site:'HO',work_date:'2026-07-31',original_site:'HO',original_work_date:'2026-11-10',version:'1',total_count:'8',camera_names:'SHOULD-NOT-OVERWRITE'});
+  assert.equal(conflict.status,409);
+  assert.equal((await repo.get('HO','2026-07-31')).down_count,0);
+  assert.equal((await admin.get('/cctv-report-data?site=INVALID&work_date=2026-11-10')).status,422);
+  assert.equal((await admin.get('/cctv-report-data?site=HO&work_date=2026-02-30')).status,422);
+  assert.equal((await request(app).get('/cctv-report-data?site=HO&work_date=2026-11-10')).status,303);
+ }finally{await db.close();}
+});
 const csrf=r=>r.text.match(/name="csrf" value="([a-f0-9]{64})"/)?.[1];
 test('CCTV source preserves source counts, percentages and notes even when names conflict',()=>{const p=parseCctvSource(source(),{to:'2026-11-12'});assert.equal(p.rows.length,6);const a=p.rows.find(r=>r.site==='ACP');assert.equal(a.down_count,0);assert.equal(a.availability_percent,100);assert.equal(a.incidents.length,2);assert.ok(a.source_flags.includes('names_differ'));assert.equal(a.source_snapshot.remarks,'ACP-CCTV-01\nACP-CCTV-02');assert.equal(cameraNames('CCTV-01\ncctv 01\nCCTV-02').length,2);assert.deepEqual(cameraMetrics(8,cameraNames('A\nB\na')),{total:8,down:2,online:6,availability:75});assert.equal(availabilityTone(59.99),'red');assert.equal(availabilityTone(60),'green');assert.throws(()=>validateCctv({site:'HO',work_date:'2026-11-12',total_count:'1',camera_names:'A\nB'}),/melebihi/);});
 test('CCTV saves derive metrics server-side, enforce versions, preserve imported history and use exact filters',async()=>{const db=await database({url:'',dataDir:null});await initialize(db);try{const repo=new CctvRepository(db);assert.equal((await repo.importSource(source(),{to:'2026-11-12'})).inserted,6);assert.equal((await repo.importSource(source(),{to:'2026-11-12'})).existing,6);await assert.rejects(repo.save({site:'ACP',work_date:'2026-07-31',version:'1',total_count:'8',camera_names:'ACP-CCTV-01\nACP-CCTV-02'}),e=>e.status===422);await repo.save({site:'HO',work_date:'2026-11-11',version:'0',total_count:'8',camera_names:'A\nB\na',down_count:'999',availability_percent:'0',incident_details:JSON.stringify([{key:'a',duration_minutes:80},{key:'b',duration_minutes:20}])});const r=await repo.get('HO','2026-11-11');assert.equal(r.down_count,2);assert.equal(r.online_count,6);assert.equal(r.availability_percent,75);assert.equal(r.incidents[0].duration_minutes,80);await assert.rejects(repo.save({site:'HO',work_date:'2026-11-11',version:'0',total_count:'8',camera_names:'C'}),e=>e.status===409);const range=await repo.data({from:'2026-11-11',to:'2026-11-11',site:'HO',search:''});assert.equal(range.history.length,1);assert.equal(range.summary.down,2);assert.equal((await repo.get('ACP','2026-07-31')).down_count,0);const malformed=source();malformed.raw_values[2][1]=null;const parsed=parseCctvSource(malformed,{to:'2026-11-12'});assert.equal(parsed.rows.length,5);assert.equal(parsed.skipped.length,1);}finally{await db.close();}});
